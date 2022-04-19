@@ -35,5 +35,7 @@ class Game(BaseModel):
 
     rsp: dict[Player, Optional[RspChoice]]
     roll: list[int]
+    score: dict[Player, int]
+    penalties: dict[Player, int]
 
     actions: dict[Player, list[str]]
