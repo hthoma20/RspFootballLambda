@@ -5,6 +5,7 @@ import boto3
 from boto3.dynamodb.conditions import Attr
 
 import rsputil
+from rspmodel import Game, Play, Player, State
 
 def lambda_handler(event, context):
     
@@ -17,7 +18,7 @@ def lambda_handler(event, context):
         return rsputil.api_client_error(f"Invalid request, missing attribute: {e}")
 
     game = new_game(game_id)
-    game['players']['home'] = user
+    game.players['home'] = user
 
     try:
         
@@ -31,40 +32,39 @@ def lambda_handler(event, context):
     except rsputil.ConditionalCheckFailedException:
         return rsputil.api_client_error('Invalid gameId: game with id already exists')
     
-    return {
-        'statusCode': 200,
-        'body': json.dumps(game)
-    }
+    return rsputil.api_success(game.dict())
 
 
 def new_game(game_id):    
-    return {
-        'gameId': game_id,
-        'version': 0,
-        'players': {
+    return Game(
+        gameId = game_id,
+        version = 0,
+        players = {
             'home': None,
             'away': None,
         },
-        'state': 'RSP',
-        'score': {
+        state = State.RSP,
+        score = {
             'home': 0,
             'away': 0
         },
-        'penalties': {
+        penalties = {
             'home': 2,
             'away': 2
         },
-        'ballpos': 35,
-        'playNum': 1,
-        'down': 1,
-        'currentPlay': 'COIN_TOSS',
-        'rsp': {
+        possession = None,
+        firstKick = None,
+        ballpos = 35,
+        playCount = 1,
+        down = 1,
+        play = Play.COIN_TOSS,
+        rsp = {
             'home': None,
             'away': None
         },
-        'roll': [],
-        'actions': {
-            'home': 'RSP',
-            'away': 'RSP'
+        roll = [],
+        actions = {
+            'home': ['RSP'],
+            'away': ['RSP']
         }
-    }
+    )

@@ -4,6 +4,8 @@ import json
 
 import boto3
 
+from rspmodel import Game
+
 def get_event_body(event):
     if 'body' not in event:
         return None
@@ -36,12 +38,11 @@ def api_client_error(body):
 def api_server_fault(body):
     return api_response(500, body)
 
-def get_game(gameId):
+def get_game(gameId) -> Game:
     dynamodb = boto3.resource('dynamodb')
 
     table = dynamodb.Table('rspfootball-games')
 
-    
     response = table.get_item(
         Key = {'gameId': gameId},
     )
@@ -49,16 +50,17 @@ def get_game(gameId):
     if 'Item' not in response:
         return None
 
-    return convert_decimals(response['Item'])
+    return Game(**response['Item'])
 
 class ConditionalCheckFailedException(Exception):
     pass
 
-def store_game(game, condition=None):
+def store_game(game: Game, condition=None):
     dynamodb = boto3.resource('dynamodb')
 
     table = dynamodb.Table('rspfootball-games')
 
+    game = game.dict()
     try:
         if condition is None:
             table.put_item(Item = game)
@@ -88,6 +90,6 @@ def convert_decimals(obj):
 # return 'home', 'away', or None, given the game and user
 def get_player(game, user):
     for player in ['home', 'away']:
-        if game['players'][player] == user:
+        if game.players[player] == user:
             return player
     return None

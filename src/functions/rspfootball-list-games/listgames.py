@@ -20,7 +20,7 @@ def get_games():
     table = dynamodb.Table('rspfootball-games')
 
     result = table.scan(
-        ProjectionExpression = 'gameId,home,away',
+        ProjectionExpression = 'gameId,players.home',
         FilterExpression = 'players.away = :null',
         ExpressionAttributeValues = {':null': None}
     )

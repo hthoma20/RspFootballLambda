@@ -26,10 +26,10 @@ def lambda_handler(event, context):
     if game is None:
         return rsputil.api_client_error('Game not found')
 
-    while (time.time() < stop_time) and (client_version >= game['version']):
+    while (time.time() < stop_time) and (client_version >= game.version):
         time.sleep(poll_interval)
         game = rsputil.get_game(game_id)
 
-    return rsputil.api_success(game)
+    return rsputil.api_success(game.dict())
 
     

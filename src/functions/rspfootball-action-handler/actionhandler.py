@@ -6,6 +6,7 @@ import boto3
 from boto3.dynamodb.conditions import Attr
 
 import rsputil
+import rspmodel
 
 def lambda_handler(event, context):
     
@@ -34,17 +35,17 @@ def lambda_handler(event, context):
         if player is None:
             return rsputil.api_client_error('Player not in game')
 
-        version = game['version']
+        version = game.version
 
         try:
             process_state(game, player, action)
-        except IllegalActionException:
-            return rsputil.api_client_error("Illegal action")
+        except IllegalActionException as e:
+            return rsputil.api_client_error(f"Illegal action: {e}")
 
         try:
-            game['version'] = version + 1
+            game.version = version + 1
             rsputil.store_game(game, condition=Attr('version').eq(version))
-            return rsputil.api_success(game)
+            return rsputil.api_success(game.dict())
         except rsputil.ConditionalCheckFailedException:
             continue
         
@@ -57,4 +58,4 @@ class IllegalActionException(Exception):
 # mutate the game in place
 # raise IllegalActionException if the action is illegal
 def process_state(game, player, action):
-    game['ballpos'] += 10
+    game.ballpos += 10
