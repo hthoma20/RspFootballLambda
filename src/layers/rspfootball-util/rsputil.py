@@ -4,7 +4,7 @@ import json
 
 import boto3
 
-from rspmodel import Game
+from rspmodel import Game, Player
 
 def get_event_body(event):
     if 'body' not in event:
@@ -88,8 +88,11 @@ def convert_decimals(obj):
     return obj
 
 # return 'home', 'away', or None, given the game and user
-def get_player(game, user):
+def get_player(game: Game, user) -> Player:
     for player in ['home', 'away']:
         if game.players[player] == user:
             return player
     return None
+
+def get_opponent(player: Player) -> Player:
+    return 'home' if player == 'away' else 'away'

@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel
 
@@ -8,15 +8,25 @@ class Player(str, Enum):
     AWAY = 'away'
 
 class State(str, Enum):
-    RSP = 'RSP'
+    COIN_TOSS = 'COIN_TOSS'
+    KICKOFF_ELECTION = 'KICKOFF_ELECTION' # whether to kick or recieve
+
+RSP_STATES = [State.COIN_TOSS]
 
 class Play(str, Enum):
-    COIN_TOSS = 'COIN_TOSS'
+    SHORT_RUN = 'SHORT_RUN'
 
 class RspChoice(str, Enum):
     ROCK = 'ROCK'
     PAPER = 'PAPER'
     SCISSORS = 'SCISSORS'
+
+class RspResult(BaseModel):
+    name: Literal['RSP'] = 'RSP'
+    home: RspChoice
+    away: RspChoice
+
+Result = Union[RspResult]
 
 class Game(BaseModel):
     gameId: str
@@ -39,3 +49,16 @@ class Game(BaseModel):
     penalties: dict[Player, int]
 
     actions: dict[Player, list[str]]
+    result: Optional[Result]
+
+
+class RspAction(BaseModel):
+    name: Literal['RSP']
+    choice: RspChoice
+
+Action = Union[RspAction]
+
+class ActionRequest(BaseModel):
+    gameId: str
+    user: str
+    action: Action

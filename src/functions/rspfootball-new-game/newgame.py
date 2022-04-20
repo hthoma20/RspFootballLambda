@@ -43,7 +43,7 @@ def new_game(game_id):
             'home': None,
             'away': None,
         },
-        state = State.RSP,
+        state = State.COIN_TOSS,
         score = {
             'home': 0,
             'away': 0
@@ -57,7 +57,7 @@ def new_game(game_id):
         ballpos = 35,
         playCount = 1,
         down = 1,
-        play = Play.COIN_TOSS,
+        play = None,
         rsp = {
             'home': None,
             'away': None
@@ -66,5 +66,6 @@ def new_game(game_id):
         actions = {
             'home': ['RSP'],
             'away': ['RSP']
-        }
+        },
+        result = None
     )
