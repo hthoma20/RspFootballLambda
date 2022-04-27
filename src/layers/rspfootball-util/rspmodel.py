@@ -10,6 +10,9 @@ class Player(str, Enum):
 class State(str, Enum):
     COIN_TOSS = 'COIN_TOSS'
     KICKOFF_ELECTION = 'KICKOFF_ELECTION' # whether to kick or recieve
+    KICKOFF_CHOICE = 'KICKOFF_CHOICE' # whether to onside kick
+    KICKOFF = 'KICKOFF'
+    ONSIDE_KICK = 'ONSIDE_KICK'
 
 RSP_STATES = [State.COIN_TOSS]
 
@@ -56,7 +59,23 @@ class RspAction(BaseModel):
     name: Literal['RSP']
     choice: RspChoice
 
-Action = Union[RspAction]
+class KickoffElectionChoice(str, Enum):
+    KICK = 'KICK'
+    RECIEVE = 'RECIEVE'
+
+class KickoffElectionAction(BaseModel):
+    name: Literal['KICKOFF_ELECTION']
+    choice: KickoffElectionChoice
+
+class KickoffChoice(str, Enum):
+    REGULAR = 'REGULAR'
+    ONSIDE = 'ONSIDE'
+
+class KickoffChoiceAction(BaseModel):
+    name: Literal['KICKOFF_CHOICE']
+    choice: KickoffChoice
+
+Action = Union[RspAction, KickoffElectionAction, KickoffChoiceAction]
 
 class ActionRequest(BaseModel):
     gameId: str

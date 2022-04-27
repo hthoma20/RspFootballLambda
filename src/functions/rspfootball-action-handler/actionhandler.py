@@ -8,7 +8,7 @@ from pydantic.error_wrappers import ValidationError
 
 import rsputil
 import rspmodel
-from rspmodel import RspChoice, State
+from rspmodel import KickoffElectionChoice, RspChoice, State
 
 def lambda_handler(event, context):
     
@@ -36,6 +36,7 @@ def lambda_handler(event, context):
             return rsputil.api_client_error('Player not in game')
 
         version = game.version
+        game.result = None
 
         try:
             process_action(game, player, request.action)
@@ -72,6 +73,19 @@ def process_action(game, player, action):
         else:
             game.actions[player] = ['POLL']
             game.actions[opponent] = ['RSP']
+    
+    elif type(action) is rspmodel.KickoffElectionAction:
+        game.state = State.KICKOFF_CHOICE
+
+        if action.choice == KickoffElectionChoice.KICK:
+            kicker = player
+            reciever = rsputil.get_opponent(player)
+        else: # choice is RECIEVE
+            kicker = rsputil.get_opponent(player)
+            reciever = player
+        
+        game.actions[kicker] = ['KICKOFF_CHOICE']
+        game.actions[reciever] = ['POLL']
 
 def process_rsp_complete(game, player):
     winner = get_rsp_winner(game.rsp)
