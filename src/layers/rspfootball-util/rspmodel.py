@@ -59,6 +59,10 @@ class RspAction(BaseModel):
     name: Literal['RSP']
     choice: RspChoice
 
+class RollAction(BaseModel):
+    name: Literal['ROLL']
+    count: int
+
 class KickoffElectionChoice(str, Enum):
     KICK = 'KICK'
     RECIEVE = 'RECIEVE'

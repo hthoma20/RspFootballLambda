@@ -8,7 +8,7 @@ from pydantic.error_wrappers import ValidationError
 
 import rsputil
 import rspmodel
-from rspmodel import KickoffElectionChoice, RspChoice, State
+from rspmodel import KickoffChoice, KickoffElectionChoice, RspChoice, State
 
 def lambda_handler(event, context):
     
@@ -84,8 +84,20 @@ def process_action(game, player, action):
             kicker = rsputil.get_opponent(player)
             reciever = player
         
+        game.firstKick = kicker
+        game.possession = kicker
         game.actions[kicker] = ['KICKOFF_CHOICE']
         game.actions[reciever] = ['POLL']
+    
+    elif type(action) is rspmodel.KickoffChoiceAction:
+        
+        if action.choice == KickoffChoice.REGULAR:
+            game.state = State.KICKOFF
+        else: # choice is ONSIDE
+            game.state = State.ONSIDE_KICK
+        
+        game.actions[player] = ['ROLL']
+        game.actions[opponent] = ['POLL']
 
 def process_rsp_complete(game, player):
     winner = get_rsp_winner(game.rsp)
