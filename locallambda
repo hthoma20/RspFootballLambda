@@ -4,9 +4,12 @@ if __name__ != '__main__':
     print("Must be run as main module")
     exit(1)
 
+import argparse
 import importlib
 import os
 import sys
+
+from unittest import mock
 
 for function in os.listdir('src/functions'):
     sys.path.append(f'src/functions/{function}')
@@ -15,13 +18,22 @@ for layer in os.listdir('src/layers'):
     sys.path.append(f'src/layers/{layer}')
 
 
-if len(sys.argv) != 3:
-    print("Usage: locallambda <module name> <body>")
-    exit(1)
+parser = argparse.ArgumentParser(description='Invoke local versions of lambda functions')
+parser.add_argument('--module', '-m', help='the module name of the lambda code')
+parser.add_argument('--body', '-d', '-b', default='', help='body to pass to the lambda, as if in the body of a request')
+parser.add_argument('--roll', required=False, nargs='+', help='provide values for any rolls in this invocation')
 
-module_name = sys.argv[1]
-body = sys.argv[2]
+args = parser.parse_args()
 
-lambda_module = importlib.import_module(module_name)
-result = lambda_module.lambda_handler({'body': body}, None)
+if args.roll:
+    import random
+    index = -1
+    def mock_roll(*_):
+        global index
+        index += 1
+        return int(args.roll[index])
+    random.randint = mock_roll 
+
+lambda_module = importlib.import_module(args.module)
+result = lambda_module.lambda_handler({'body': args.body}, None)
 print(result)

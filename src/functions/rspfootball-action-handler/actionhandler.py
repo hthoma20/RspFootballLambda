@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import random
 
 import boto3
 from boto3.dynamodb.conditions import Attr
@@ -99,6 +100,51 @@ def process_action(game, player, action):
         game.actions[player] = ['ROLL']
         game.actions[opponent] = ['POLL']
 
+    elif type(action) is rspmodel.RollAction:
+        process_roll_action(game, player, action.count)
+
+
+def process_roll_action(game, player, count: int):
+
+    if game.state in [State.KICKOFF, State.ONSIDE_KICK]:
+        required_count = 3 if game.state == State.KICKOFF else 2
+        require_die_count(required_count, count, game.state)
+
+        roll = roll_dice(count)
+        game.result = rspmodel.RollResult(roll=roll)
+
+        game.ballpos += 5 * sum(roll)
+
+        switch_possession(game)
+
+        if game.ballpos <= -10:
+            game.ballpos = 20
+            game.state = State.PLAY_CALL
+            game.actions[game.possession] = ['CALL_PLAY']
+            game.actions[player] = ['POLL']
+
+        elif game.ballpos <= 0:
+            game.state = State.TOUCHBACK_CHOICE
+            game.actions[game.possession] = ['TOUCHBACK_CHOICE']
+            game.actions[player] = ['POLL']
+
+        else:
+            game.state = State.KICK_RETURN
+            game.actions[game.possession] = ['ROLL']
+            game.actions[player] = ['POLL']
+    
+    else:
+        raise IllegalActionException('Invalid state for roll - this represents an unexpected state')
+
+
+def switch_possession(game):
+    game.possession = rsputil.get_opponent(game.possession)
+    game.ballpos = 100 - game.ballpos
+
+def require_die_count(required, count, description):
+    if count != required:
+        raise IllegalActionException(f'Must roll {required} dice for {description}')
+
 def process_rsp_complete(game, player):
     winner = get_rsp_winner(game.rsp)
 
@@ -117,6 +163,13 @@ def process_rsp_complete(game, player):
             game.state = State.KICKOFF_ELECTION
             game.actions[winner] = ['KICKOFF_ELECTION']
             game.actions[rsputil.get_opponent(winner)] = ['POLL']
+
+
+def roll_die():
+    return random.randint(1, 6)
+
+def roll_dice(count):
+    return [roll_die() for _ in range(count)]
 
 def get_rsp_winner(rsp):
     if rsp['home'] == rsp['away']:

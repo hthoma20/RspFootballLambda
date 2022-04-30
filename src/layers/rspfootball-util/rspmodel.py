@@ -13,6 +13,9 @@ class State(str, Enum):
     KICKOFF_CHOICE = 'KICKOFF_CHOICE' # whether to onside kick
     KICKOFF = 'KICKOFF'
     ONSIDE_KICK = 'ONSIDE_KICK'
+    TOUCHBACK_CHOICE = 'TOUCHBACK_CHOICE' # whether to take a knee or run
+    KICK_RETURN = 'KICK_RETURN' # rolling from a kickoff or punt
+    PLAY_CALL = 'PLAY_CALL'
 
 RSP_STATES = [State.COIN_TOSS]
 
@@ -29,7 +32,11 @@ class RspResult(BaseModel):
     home: RspChoice
     away: RspChoice
 
-Result = Union[RspResult]
+class RollResult(BaseModel):
+    name: Literal['ROLL'] = 'ROLL'
+    roll: list[int]
+
+Result = Union[RspResult, RollResult]
 
 class Game(BaseModel):
     gameId: str
@@ -79,7 +86,19 @@ class KickoffChoiceAction(BaseModel):
     name: Literal['KICKOFF_CHOICE']
     choice: KickoffChoice
 
-Action = Union[RspAction, KickoffElectionAction, KickoffChoiceAction]
+class CallPlayAction(BaseModel):
+    name: Literal['CALL_PLAY']
+    play: Play
+
+class TouchbackChoice(str, Enum):
+    TOUCHBACK = 'TOUCHBACK'
+    ROLL = 'ROLL'
+
+class TouchbackChoiceAction(BaseModel):
+    name: Literal['TOUCHBACK_CHOICE']
+    choice: TouchbackChoice
+
+Action = Union[RspAction, KickoffElectionAction, RollAction, KickoffChoiceAction, CallPlayAction]
 
 class ActionRequest(BaseModel):
     gameId: str
