@@ -12,7 +12,7 @@ DEFAULT_GAME = rspmodel.Game(
             'home': 'harry',
             'away': 'daylin',
         },
-        state = rspmodel.State.KICKOFF,
+        state = rspmodel.State.ONSIDE_KICK,
         score = {
             'home': 0,
             'away': 0

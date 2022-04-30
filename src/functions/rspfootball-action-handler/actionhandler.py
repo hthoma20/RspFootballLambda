@@ -106,9 +106,8 @@ def process_action(game, player, action):
 
 def process_roll_action(game, player, count: int):
 
-    if game.state in [State.KICKOFF, State.ONSIDE_KICK]:
-        required_count = 3 if game.state == State.KICKOFF else 2
-        require_die_count(required_count, count, game.state)
+    if game.state == State.KICKOFF:
+        require_die_count(3, count, game.state)
 
         roll = roll_dice(count)
         game.result = rspmodel.RollResult(roll=roll)
@@ -132,6 +131,22 @@ def process_roll_action(game, player, count: int):
             game.state = State.KICK_RETURN
             game.actions[game.possession] = ['ROLL']
             game.actions[player] = ['POLL']
+
+    elif game.state == State.ONSIDE_KICK:
+        require_die_count(2, count, game.state)
+
+        game.ballpos = 45
+
+        roll = roll_dice(count)
+        game.result = rspmodel.RollResult(roll=roll)
+
+        if sum(roll) > 5:
+            switch_possession(game)
+        
+        game.state = State.PLAY_CALL
+        game.actions[game.possession] = ['CALL_PLAY']
+        game.actions[rsputil.get_opponent(game.possession)] = ['POLL']
+        
     
     else:
         raise IllegalActionException('Invalid state for roll - this represents an unexpected state')
