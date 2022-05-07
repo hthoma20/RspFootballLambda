@@ -36,7 +36,7 @@ def lambda_handler(event, context):
         if player is None:
             return rsputil.api_client_error('Player not in game')
 
-        if action.name not in game.actions[player]:
+        if request.action.name not in game.actions[player]:
             return rsputil.api_client_error('Action not allowed')
 
         version = game.version
