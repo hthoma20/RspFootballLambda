@@ -15,6 +15,8 @@ class State(str, Enum):
     ONSIDE_KICK = 'ONSIDE_KICK'
     TOUCHBACK_CHOICE = 'TOUCHBACK_CHOICE' # whether to take a knee or run
     KICK_RETURN = 'KICK_RETURN' # rolling from a kickoff or punt
+    KICK_RETURN_1 = 'KICK_RETURN_1' # a 1 was rolled, choose to roll again
+    KICK_RETURN_6 = 'KICK_RETURN_6' # a 6 was rolled, roll again
     PLAY_CALL = 'PLAY_CALL'
 
 RSP_STATES = [State.COIN_TOSS]
@@ -92,13 +94,22 @@ class CallPlayAction(BaseModel):
 
 class TouchbackChoice(str, Enum):
     TOUCHBACK = 'TOUCHBACK'
-    ROLL = 'ROLL'
+    RETURN = 'RETURN'
 
 class TouchbackChoiceAction(BaseModel):
     name: Literal['TOUCHBACK_CHOICE']
     choice: TouchbackChoice
 
-Action = Union[RspAction, KickoffElectionAction, RollAction, KickoffChoiceAction, CallPlayAction]
+class RollAgainChocie(str, Enum):
+    ROLL = 'ROLL'
+    HOLD = 'HOLD'
+
+class RollAgainChoiceAction(BaseModel):
+    name: Literal['ROLL_AGAIN_CHOICE']
+    choice: RollAgainChocie
+
+Action = Union[RspAction, KickoffElectionAction, RollAction, KickoffChoiceAction, CallPlayAction,
+    TouchbackChoiceAction, RollAgainChoiceAction]
 
 class ActionRequest(BaseModel):
     gameId: str
