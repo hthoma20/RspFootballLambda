@@ -159,7 +159,7 @@ def process_roll_action(game, player, count: int):
         require_die_count(1, count, description=game.state)
 
         roll = roll_die()
-        game.result = rspmodel.RollResult(roll=roll)
+        game.result = rspmodel.RollResult(roll=[roll])
 
         game.ballpos += 5 * roll
 

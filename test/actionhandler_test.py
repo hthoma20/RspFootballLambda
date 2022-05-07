@@ -148,6 +148,54 @@ class ActionHandlerTest(unittest.TestCase):
             'play': None,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
         })
+    
+    def test_kick_return_roll_1(self):
+        self.action_test_helper(init_game = {
+            'state': State.KICK_RETURN,
+            'possession': ACTING_PLAYER,
+            'ballpos': 10
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 1
+        ), expected_game = {
+            'state': State.KICK_RETURN_1,
+            'possession': ACTING_PLAYER,
+            'ballpos': 15,
+            'play': None,
+            'actions': {ACTING_PLAYER: ['ROLL_AGAIN_CHOICE']}
+        }, roll=[1])
+    
+    def test_kick_return_roll_6(self):
+        self.action_test_helper(init_game = {
+            'state': State.KICK_RETURN,
+            'possession': ACTING_PLAYER,
+            'ballpos': 10
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 1
+        ), expected_game = {
+            'state': State.KICK_RETURN_6,
+            'possession': ACTING_PLAYER,
+            'ballpos': 40,
+            'play': None,
+            'actions': {ACTING_PLAYER: ['ROLL']}
+        }, roll=[6])
+    
+    def test_kick_return_normal(self):
+        self.action_test_helper(init_game = {
+            'state': State.KICK_RETURN,
+            'possession': ACTING_PLAYER,
+            'ballpos': 10
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'ballpos': 20,
+            'play': None,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
+        }, roll=[2])
         
 if __name__ == '__main__':
     unittest.main()
