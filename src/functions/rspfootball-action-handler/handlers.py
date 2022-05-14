@@ -2,7 +2,6 @@ import random
 
 import rspmodel
 from rspmodel import KickoffChoice, KickoffElectionChoice, RollAgainChoice, RspChoice, State, TouchbackChoice
-# import rsputil
 from rsputil import get_opponent
 
 class IllegalActionException(Exception):
@@ -232,7 +231,7 @@ class KickoffElectionActionHandler(ActionHandler):
         if action.choice == KickoffElectionChoice.KICK:
             kicker = player
         else: # choice is RECIEVE
-            kicker = rsputil.get_opponent(player)
+            kicker = get_opponent(player)
         
         game.firstKick = kicker
         game.possession = kicker
