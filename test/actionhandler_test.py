@@ -79,7 +79,68 @@ class ActionHandlerTest(unittest.TestCase):
         actionhandler.process_action(game, ACTING_PLAYER, action)
         self.assertValues(game.dict(), expected_game)
 
+    def test_rsp_first_action(self):
+        self.action_test_helper(init_game = {
+            'state': State.COIN_TOSS
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.COIN_TOSS,
+            'rsp': {
+                ACTING_PLAYER: 'ROCK',
+                OPPONENT: None
+            },
+            'actions': {ACTING_PLAYER: ['POLL'], OPPONENT: ['RSP']}
+        })
+
+    def test_coin_toss_tie(self):
+        self.action_test_helper(init_game = {
+            'state': State.COIN_TOSS,
+            'rsp': {
+                OPPONENT: 'ROCK',
+                ACTING_PLAYER: None
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.COIN_TOSS,
+            'rsp': {
+                OPPONENT: None,
+                ACTING_PLAYER: None
+            },
+            'result': rspmodel.RspResult(
+                name = 'RSP',
+                home = 'ROCK',
+                away = 'ROCK'
+            )
+        })
+
+    def test_coin_toss_win(self):
+        self.action_test_helper(init_game = {
+            'state': State.COIN_TOSS,
+            'rsp': {
+                OPPONENT: 'ROCK',
+                ACTING_PLAYER: None
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.KICKOFF_ELECTION,
+            'rsp': {
+                OPPONENT: None,
+                ACTING_PLAYER: None
+            },
+            'result': rspmodel.RspResult(**{
+                'name': 'RSP',
+                ACTING_PLAYER: 'PAPER',
+                OPPONENT: 'ROCK'
+            })
+        })
     
+
     def test_kickoff_to_touchback(self):
         self.action_test_helper(init_game = {
             'state': State.KICKOFF,

@@ -64,7 +64,12 @@ class RspActionHandler(ActionHandler):
                 home = game.rsp['home'],
                 away = game.rsp['away']
             )
-            self.handle_rsp_action(game, self.get_rsp_winner(game.rsp))
+            winner = self.get_rsp_winner(game.rsp)
+            game.rsp = {
+                'home': None,
+                'away': None,
+            }
+            self.handle_rsp_action(game, winner)
         else:
             game.actions[opponent] = ['RSP']
 
@@ -88,7 +93,6 @@ class CoinTossActionHandler(RspActionHandler):
     def handle_rsp_action(self, game, winner):
         # during the cointoss a tie is a redo
         if winner is None:
-            game.rsp = {'home': None, 'away': None}
             game.actions['home'] = ['RSP']
             game.actions['away'] = ['RSP']
         else:
