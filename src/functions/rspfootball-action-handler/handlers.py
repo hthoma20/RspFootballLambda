@@ -1,7 +1,7 @@
 import random
 
 import rspmodel
-from rspmodel import KickoffChoice, KickoffElectionChoice, RspChoice, State, TouchbackChoice
+from rspmodel import KickoffChoice, KickoffElectionChoice, RollAgainChoice, RspChoice, State, TouchbackChoice
 # import rsputil
 from rsputil import get_opponent
 
@@ -16,6 +16,15 @@ def set_call_play_state(game):
 def switch_possession(game):
     game.possession = get_opponent(game.possession)
     game.ballpos = 100 - game.ballpos
+
+def process_touch_down(game):
+    game.score[game.possession] += 6
+
+    game.state = State.PAT_CHOICE
+    game.actions[game.possession] = ['PAT_CHOICE']
+
+def roll_dice(count):
+    return [random.randint(1, 6) for _ in range(count)]
 
 class ActionHandler:
 
@@ -106,7 +115,7 @@ class RollActionHandler(ActionHandler):
         if action.count not in self.allowed_counts:
             raise IllegalActionException(f'Must roll {self.allowed_counts} dice in state {game.state}')
         
-        roll = [random.randint(1, 6) for _ in range(action.count)]
+        roll = roll_dice(action.count)
         game.result = rspmodel.RollResult(roll=roll)
         self.handle_roll_action(game, roll)
 
@@ -170,6 +179,44 @@ class KickReturnActionHandler(RollActionHandler):
         else:
             set_call_play_state(game)
 
+class KickReturn6ActionHandler(RollActionHandler):
+    states = [State.KICK_RETURN_6]
+    allowed_counts = [1]
+
+    def handle_roll_action(self, game, roll):
+        [roll] = roll
+        
+        if roll == 6:
+            process_touch_down(game)
+        else:
+            game.ballpos += 5 * roll
+            set_call_play_state(game)
+
+class KickReturn1ActionHandler(ActionHandler):
+    states = [State.KICK_RETURN_1]
+    actions = [rspmodel.RollAgainChoiceAction]
+
+    def handle_action(self, game, player, action):
+        
+        if action.choice == RollAgainChoice.HOLD:
+            set_call_play_state(game)
+            return
+        
+        # choice is ROLL
+        roll = roll_dice(count=1)
+        game.result = rspmodel.RollResult(roll=roll)
+
+        [roll] = roll
+        game.ballpos += 5 * roll
+
+        if roll == 1:
+            game.state = State.FUMBLE
+            game.actions = {
+                'home': ['RSP'],
+                'away': ['RSP']
+            }
+        else:
+            set_call_play_state(game)
 
 class KickoffElectionActionHandler(ActionHandler):
     states = [State.KICKOFF_ELECTION]
@@ -199,7 +246,7 @@ class KickoffChoiceActionHanlder(ActionHandler):
         
         game.actions[player] = ['ROLL']
 
-class TouchbackChoiceActionHanlder(ActionHandler):
+class TouchbackChoiceActionHandler(ActionHandler):
     states = [State.TOUCHBACK_CHOICE]
     actions = [rspmodel.TouchbackChoiceAction]
         
