@@ -5,7 +5,7 @@ sys.path.append(f'src/layers/rspfootball-util')
 sys.path.append(f'src/functions/rspfootball-action-handler')
 
 import rspmodel
-from rspmodel import State
+from rspmodel import KickoffChoiceAction, State
 import actionhandler
 
 ACTING_PLAYER = 'home'
@@ -140,6 +140,44 @@ class ActionHandlerTest(unittest.TestCase):
             })
         })
     
+    def test_kickoff_election(self):
+        self.action_test_helper(init_game = {
+            'state': State.KICKOFF_ELECTION,
+            'rsp': {
+                OPPONENT: 'ROCK',
+                ACTING_PLAYER: None
+            }
+        }, action = rspmodel.KickoffElectionAction(
+            name = 'KICKOFF_ELECTION',
+            choice = 'RECIEVE'
+        ), expected_game = {
+            'state': State.KICKOFF_CHOICE,
+            'possession': OPPONENT
+        })
+
+    def test_kickoff_choice_regular(self):
+        self.action_test_helper(init_game = {
+            'state': State.KICKOFF_CHOICE,
+            'possession': ACTING_PLAYER
+        }, action = KickoffChoiceAction(
+            name = 'KICKOFF_CHOICE',
+            choice = 'REGULAR'
+        ), expected_game = {
+            'state': State.KICKOFF,
+            'possession': ACTING_PLAYER
+        })
+    
+    def test_kickoff_choice_onside(self):
+        self.action_test_helper(init_game = {
+            'state': State.KICKOFF_CHOICE,
+            'possession': ACTING_PLAYER
+        }, action = KickoffChoiceAction(
+            name = 'KICKOFF_CHOICE',
+            choice = 'ONSIDE'
+        ), expected_game = {
+            'state': State.ONSIDE_KICK,
+            'possession': ACTING_PLAYER
+        })
 
     def test_kickoff_to_touchback(self):
         self.action_test_helper(init_game = {
@@ -338,6 +376,23 @@ class ActionHandlerTest(unittest.TestCase):
             'play': None,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
         })
+
+class ActionHandlerRegistrationTest(unittest.TestCase):
+
+    def test_no_conflicts(self):
+        # dict from (state, action) to handler
+        handlers = {}
+
+        for handler in actionhandler.ACTION_HANDLERS:
+            for state in handler.states:
+                for action in handler.actions:
+                    key = (state, action)
+                    if key in handlers:
+                        self.assertTrue(False, f'''
+                        Multiple handlers registered for: {key}
+                        Registered handlers: {type(handlers[key])} and {type(handler)}''')
+                    handlers[(state, action)] = handler
+
 
 if __name__ == '__main__':
     unittest.main()

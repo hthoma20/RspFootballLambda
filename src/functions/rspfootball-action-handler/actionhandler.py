@@ -60,7 +60,7 @@ def lambda_handler(event, context):
 ACTION_HANDLERS = [
     handlers.CoinTossActionHandler(),
     handlers.KickoffElectionActionHandler(),
-    handlers.KickoffChoiceActionHanlder(),
+    handlers.KickoffChoiceActionHandler(),
     handlers.KickoffActionHandler(),
     handlers.OnsideKickActionHandler(),
     handlers.KickReturnActionHandler(),

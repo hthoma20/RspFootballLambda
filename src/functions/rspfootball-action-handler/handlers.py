@@ -237,7 +237,7 @@ class KickoffElectionActionHandler(ActionHandler):
         game.possession = kicker
         game.actions[kicker] = ['KICKOFF_CHOICE']
 
-class KickoffChoiceActionHanlder(ActionHandler):
+class KickoffChoiceActionHandler(ActionHandler):
     states = [State.KICKOFF_CHOICE]
     actions = [rspmodel.KickoffChoiceAction]
         
