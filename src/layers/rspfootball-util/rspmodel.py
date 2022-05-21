@@ -23,8 +23,10 @@ class State(str, Enum):
     PAT_CHOICE = 'PAT_CHOICE'
 
     PLAY_CALL = 'PLAY_CALL'
+    SHORT_RUN = 'SHORT_RUN'
+    SHORT_RUN_CONT = 'SHORT_RUN_CONT'
 
-RSP_STATES = [State.COIN_TOSS]
+    SACK_ROLL = 'SACK_ROLL'
 
 class Play(str, Enum):
     SHORT_RUN = 'SHORT_RUN'

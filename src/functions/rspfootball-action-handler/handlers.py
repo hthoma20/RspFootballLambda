@@ -1,7 +1,7 @@
 import random
 
 import rspmodel
-from rspmodel import KickoffChoice, KickoffElectionChoice, RollAgainChoice, RspChoice, State, TouchbackChoice
+from rspmodel import KickoffChoice, KickoffElectionChoice, Play, RollAgainChoice, RspChoice, State, TouchbackChoice
 from rsputil import get_opponent
 
 class IllegalActionException(Exception):
@@ -11,6 +11,27 @@ def set_call_play_state(game):
     game.state = State.PLAY_CALL
     game.actions[game.possession] = ['CALL_PLAY', 'PENALTY']
     game.actions[get_opponent(game.possession)] = ['POLL', 'PENALTY']
+    game.play = None
+
+def touchdown(game):
+    game.score[game.possession] += 6
+    game.state = State.PAT_CHOICE
+    game.actions[game.possession] = ['PAT_CHOICE']
+
+def end_play(game):
+
+    game.playCount += 1
+    game.down += 1
+
+    if game.ballpos >= 100:
+        touchdown(game)
+        return
+    
+    if game.down > 4:
+        switch_possession(game)
+        game.down = 1
+    
+    set_call_play_state(game)
 
 def switch_possession(game):
     game.possession = get_opponent(game.possession)
@@ -261,3 +282,49 @@ class TouchbackChoiceActionHandler(ActionHandler):
             game.play = None # since a punt can end with a kick return, mark that there is not a play to end
             game.state = State.KICK_RETURN
             game.actions[player] = ['ROLL']
+
+
+class PlayCallActionHandler(ActionHandler):
+    states = [State.PLAY_CALL]
+    actions = [rspmodel.CallPlayAction]
+
+    def handle_action(self, game, player, action):
+        game.play = action.play
+
+        if game.play == Play.SHORT_RUN:
+            game.state = State.SHORT_RUN
+        else:
+            raise IllegalActionException("Unexpected play")
+        
+        game.actions = {
+            'home': ['RSP'],
+            'away': ['RSP']
+        }
+
+class ShortRunActionHandler(RspActionHandler):
+    states = [State.SHORT_RUN, State.SHORT_RUN_CONT]
+
+    def handle_rsp_action(self, game, winner):
+        opponent = get_opponent(game.possession)
+
+        # if this is a continuation, we can treat a loss as a tie
+        if game.state == State.SHORT_RUN_CONT and winner == opponent:
+            winner = None
+
+        if winner == game.possession:
+            game.ballpos += 5
+            
+            if game.ballpos >= 100:
+                end_play(game)
+            else:
+                game.state = State.SHORT_RUN_CONT
+                game.actions = {
+                    'home': ['RSP'],
+                    'away': ['RSP']
+                }
+        elif winner == opponent:
+            game.state = State.SACK_ROLL
+            game.actions[opponent] = ['ROLL']
+
+        else:
+            end_play(game)

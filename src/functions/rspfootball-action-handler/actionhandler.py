@@ -67,7 +67,9 @@ ACTION_HANDLERS = [
     handlers.KickReturnActionHandler(),
     handlers.KickReturn6ActionHandler(),
     handlers.KickReturn1ActionHandler(),
-    handlers.TouchbackChoiceActionHandler()
+    handlers.TouchbackChoiceActionHandler(),
+    handlers.PlayCallActionHandler(),
+    handlers.ShortRunActionHandler()
 ]
 
 # mutate the game in place
@@ -75,7 +77,9 @@ ACTION_HANDLERS = [
 def process_action(game, player, action):
     for handler in ACTION_HANDLERS:
         if (game.state in handler.states) and (type(action) in handler.actions):
+            logging.debug(f'init game: {game}')
             logging.info(f'selected handler: {type(handler).__name__}')
+            logging.debug(f'handled game: {game}')
             handler.handle_action(game, player, action)
             return
     

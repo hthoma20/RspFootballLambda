@@ -5,7 +5,7 @@ sys.path.append(f'src/layers/rspfootball-util')
 sys.path.append(f'src/functions/rspfootball-action-handler')
 
 import rspmodel
-from rspmodel import KickoffChoiceAction, State
+from rspmodel import KickoffChoiceAction, Play, State
 import rsputil
 import actionhandler
 
@@ -377,6 +377,239 @@ class ActionHandlerTest(unittest.TestCase):
             'play': None,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
         })
+    
+    def test_play_call_short_run(self):
+        self.action_test_helper(init_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+        }, action = rspmodel.CallPlayAction(
+            name = 'CALL_PLAY',
+            play = 'SHORT_RUN'
+        ), expected_game = {
+            'state': State.SHORT_RUN,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'actions': {'home': ['RSP'], 'away': ['RSP']}
+        })
+    
+    def test_short_run_win(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'ballpos': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.SHORT_RUN_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'ballpos': 15,
+            'actions': {'home': ['RSP'], 'away': ['RSP']}
+        })
+    
+    def test_short_run_loss(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'ballpos': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'SCISSORS'
+        ), expected_game = {
+            'state': State.SACK_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'ballpos': 10,
+            'actions': {OPPONENT: ['ROLL']}
+        })
+    
+    def test_short_run_tie(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN,
+            'possession': ACTING_PLAYER,
+            'ballpos': 10,
+            'down': 1,
+            'playCount': 1,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 10,
+            'down': 2,
+            'playCount': 2,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
+        })
+    
+    def test_short_run_touchdown(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN,
+            'possession': ACTING_PLAYER,
+            'ballpos': 95,
+            'score': {ACTING_PLAYER: 0, OPPONENT: 0},
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.PAT_CHOICE,
+            'possession': ACTING_PLAYER,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0},
+            'actions': {ACTING_PLAYER: ['PAT_CHOICE']}
+        })
+    
+    def test_short_run_turnover(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN,
+            'possession': ACTING_PLAYER,
+            'ballpos': 20,
+            'down': 4,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'down': 1,
+            'ballpos': 80,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+        })
+    
+    def test_short_run_cont_win(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'ballpos': 10,
+            'down': 1,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.SHORT_RUN_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'ballpos': 15,
+            'down': 1,
+            'actions': {'home': ['RSP'], 'away': ['RSP']}
+        })
+    
+    def test_short_run_cont_loss(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'down': 1,
+            'ballpos': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'SCISSORS'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 10,
+            'down': 2,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
+        })
+    
+    def test_short_run_cont_tie(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'down': 1,
+            'ballpos': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 10,
+            'down': 2,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
+        })
+    
+    def test_short_run_cont_touchdown(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'ballpos': 95,
+            'score': {ACTING_PLAYER: 0, OPPONENT: 0},
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.PAT_CHOICE,
+            'possession': ACTING_PLAYER,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0},
+            'actions': {ACTING_PLAYER: ['PAT_CHOICE']}
+        })
+    
+    def test_short_run_cont_turnover(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'ballpos': 20,
+            'down': 4,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'ballpos': 80,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+        })
+
 
 class ActionHandlerRegistrationTest(unittest.TestCase):
 
