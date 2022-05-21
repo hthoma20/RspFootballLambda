@@ -1,17 +1,18 @@
+import logging
 import os
 
-import boto3
 from boto3.dynamodb.conditions import Attr
 from pydantic.error_wrappers import ValidationError
 
 import rsputil
 import rspmodel
-from rspmodel import KickoffChoice, KickoffElectionChoice, RspChoice, State, TouchbackChoice
 
 import handlers
 
 def lambda_handler(event, context):
     
+    rsputil.configure_logger()
+
     body = rsputil.get_event_body(event)
     
     if body is None:
@@ -74,6 +75,7 @@ ACTION_HANDLERS = [
 def process_action(game, player, action):
     for handler in ACTION_HANDLERS:
         if (game.state in handler.states) and (type(action) in handler.actions):
+            logging.info(f'selected handler: {type(handler).__name__}')
             handler.handle_action(game, player, action)
             return
     

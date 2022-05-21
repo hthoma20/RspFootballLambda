@@ -1,10 +1,19 @@
 import base64
 import decimal
 import json
+import logging
+import os
 
 import boto3
 
 from rspmodel import Game, Player
+
+
+def configure_logger():
+    level = os.environ['LOG_LEVEL']
+    level = getattr(logging, level.upper())
+    logging.basicConfig(level=level)
+
 
 def get_event_body(event):
     if 'body' not in event:

@@ -6,6 +6,7 @@ sys.path.append(f'src/functions/rspfootball-action-handler')
 
 import rspmodel
 from rspmodel import KickoffChoiceAction, State
+import rsputil
 import actionhandler
 
 ACTING_PLAYER = 'home'
@@ -395,4 +396,5 @@ class ActionHandlerRegistrationTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    rsputil.configure_logger()
     unittest.main()
