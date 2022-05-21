@@ -610,6 +610,52 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
         })
 
+    def test_short_run_sack_success(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.SHORT_RUN,
+            'down': 1,
+            'ballpos': 20,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'ballpos': 15,
+            'down': 2,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+        }, roll = [5])
+    
+    def test_short_run_sack_fail(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.SHORT_RUN,
+            'down': 1,
+            'ballpos': 20,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'ballpos': 20,
+            'down': 2,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+        }, roll = [4])
+
 
 class ActionHandlerRegistrationTest(unittest.TestCase):
 

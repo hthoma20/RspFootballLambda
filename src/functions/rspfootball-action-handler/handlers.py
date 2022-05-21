@@ -328,3 +328,19 @@ class ShortRunActionHandler(RspActionHandler):
 
         else:
             end_play(game)
+
+class SackActionHandler(RollActionHandler):
+    states = [State.SACK_ROLL]
+    allowed_counts = [1]
+
+    def handle_roll_action(self, game, roll):
+
+        [roll] = roll
+
+        if game.play == Play.SHORT_RUN:
+            if roll >= 5:
+                game.ballpos -= 5
+        else:
+            raise Exception(f'Unexpected play [{game.play}] for sack roll')
+        
+        end_play(game)

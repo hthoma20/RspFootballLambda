@@ -12,7 +12,7 @@ DEFAULT_GAME = rspmodel.Game(
             'home': 'harry',
             'away': 'daylin',
         },
-        state = rspmodel.State.KICKOFF,
+        state = rspmodel.State.PLAY_CALL,
         score = {
             'home': 0,
             'away': 0
@@ -33,10 +33,10 @@ DEFAULT_GAME = rspmodel.Game(
         },
         roll = [],
         actions = {
-            'home': ['ROLL'],
+            'home': ['CALL_PLAY', 'PENALTY'],
             'away': ['POLL']
         },
-        result = {'name': 'RSP', 'home': 'ROCK', 'away': 'PAPER'})
+        result = None)
 
 def set_game(overrides):
     game = {**DEFAULT_GAME.dict(), **overrides}

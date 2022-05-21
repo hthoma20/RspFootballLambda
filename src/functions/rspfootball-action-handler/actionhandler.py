@@ -69,7 +69,8 @@ ACTION_HANDLERS = [
     handlers.KickReturn1ActionHandler(),
     handlers.TouchbackChoiceActionHandler(),
     handlers.PlayCallActionHandler(),
-    handlers.ShortRunActionHandler()
+    handlers.ShortRunActionHandler(),
+    handlers.SackActionHandler()
 ]
 
 # mutate the game in place
