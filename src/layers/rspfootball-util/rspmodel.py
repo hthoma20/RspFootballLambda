@@ -56,6 +56,7 @@ class Game(BaseModel):
     play: Optional[Play]
     possession: Optional[Player]
     ballpos: int
+    firstDown: Optional[int]
     
     playCount: int
     down: int

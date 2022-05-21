@@ -1,3 +1,4 @@
+import logging
 import random
 
 import rspmodel
@@ -27,11 +28,19 @@ def end_play(game):
         touchdown(game)
         return
     
-    if game.down > 4:
+    if game.ballpos >= game.firstDown:
+        set_first_down(game)
+    elif game.down > 4:
         switch_possession(game)
-        game.down = 1
+        set_first_down(game)
+    
     
     set_call_play_state(game)
+
+def set_first_down(game):
+    game.down = 1
+    game.firstDown = game.ballpos + 10
+    game.firstDown = min(game.firstDown, 100)
 
 def switch_possession(game):
     game.possession = get_opponent(game.possession)
@@ -85,6 +94,7 @@ class RspActionHandler(ActionHandler):
                 away = game.rsp['away']
             )
             winner = self.get_rsp_winner(game.rsp)
+            logging.info(f'RSP winner: {winner}')
             game.rsp = {
                 'home': None,
                 'away': None,
@@ -159,10 +169,12 @@ class KickoffActionHandler(RollActionHandler):
 
         if sum(roll) <= 8:
             game.ballpos = 40
+            set_first_down(game)
             set_call_play_state(game)
 
         elif game.ballpos <= -10:
             game.ballpos = 20
+            set_first_down(game)
             set_call_play_state(game)
 
         elif game.ballpos <= 0:
@@ -184,6 +196,7 @@ class OnsideKickActionHandler(RollActionHandler):
             switch_possession(game)
         
         set_call_play_state(game)
+        set_first_down(game)
 
 class KickReturnActionHandler(RollActionHandler):
     states = [State.KICK_RETURN]
@@ -202,6 +215,7 @@ class KickReturnActionHandler(RollActionHandler):
             game.actions[game.possession] = ['ROLL']
         else:
             set_call_play_state(game)
+            set_first_down(game)
 
 class KickReturn6ActionHandler(RollActionHandler):
     states = [State.KICK_RETURN_6]
@@ -214,6 +228,7 @@ class KickReturn6ActionHandler(RollActionHandler):
             process_touch_down(game)
         else:
             game.ballpos += 5 * roll
+            set_first_down(game)
             set_call_play_state(game)
 
 class KickReturn1ActionHandler(ActionHandler):
@@ -224,6 +239,7 @@ class KickReturn1ActionHandler(ActionHandler):
         
         if action.choice == RollAgainChoice.HOLD:
             set_call_play_state(game)
+            set_first_down(game)
             return
         
         # choice is ROLL
@@ -241,6 +257,7 @@ class KickReturn1ActionHandler(ActionHandler):
             }
         else:
             set_call_play_state(game)
+            set_first_down(game)
 
 class KickoffElectionActionHandler(ActionHandler):
     states = [State.KICKOFF_ELECTION]
@@ -277,6 +294,7 @@ class TouchbackChoiceActionHandler(ActionHandler):
     def handle_action(self, game, player, action):
         if action.choice == TouchbackChoice.TOUCHBACK:
             game.ballpos = 20
+            set_first_down(game)
             set_call_play_state(game)
         else: # choice is RETURN
             game.play = None # since a punt can end with a kick return, mark that there is not a play to end
@@ -310,7 +328,7 @@ class ShortRunActionHandler(RspActionHandler):
         # if this is a continuation, we can treat a loss as a tie
         if game.state == State.SHORT_RUN_CONT and winner == opponent:
             winner = None
-
+        
         if winner == game.possession:
             game.ballpos += 5
             

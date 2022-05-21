@@ -217,6 +217,8 @@ class ActionHandlerTest(unittest.TestCase):
         ), expected_game = {
             'state': State.PLAY_CALL,
             'possession': OPPONENT,
+            'ballpos': 40,
+            'firstDown': 50,
             'play': None,
             'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
         }, roll=[2,2,4])
@@ -245,6 +247,8 @@ class ActionHandlerTest(unittest.TestCase):
         ), expected_game = {
             'state': State.PLAY_CALL,
             'possession': ACTING_PLAYER,
+            'ballpos': 20,
+            'firstDown': 30,
             'play': None,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
         })
@@ -293,6 +297,7 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.PLAY_CALL,
             'possession': ACTING_PLAYER,
             'ballpos': 20,
+            'firstDown': 30,
             'play': None,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
         }, roll=[2])
@@ -326,6 +331,7 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.PLAY_CALL,
             'possession': ACTING_PLAYER,
             'ballpos': 25,
+            'firstDown': 35,
             'play': None,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
         }, roll=[3])
@@ -358,6 +364,7 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.PLAY_CALL,
             'possession': ACTING_PLAYER,
             'ballpos': 20,
+            'firstDown': 30,
             'play': None,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
         }, roll=[2])
@@ -374,6 +381,7 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.PLAY_CALL,
             'possession': ACTING_PLAYER,
             'ballpos': 10,
+            'firstDown': 20,
             'play': None,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
         })
@@ -439,6 +447,7 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.SHORT_RUN,
             'possession': ACTING_PLAYER,
             'ballpos': 10,
+            'firstDown': 20,
             'down': 1,
             'playCount': 1,
             'rsp': {
@@ -483,6 +492,7 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.SHORT_RUN,
             'possession': ACTING_PLAYER,
             'ballpos': 20,
+            'firstDown': 25,
             'down': 4,
             'rsp': {
                 ACTING_PLAYER: None,
@@ -499,6 +509,29 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
         })
     
+    def test_short_run_first_down(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN_CONT,
+            'possession': ACTING_PLAYER,
+            'ballpos': 25,
+            'firstDown': 25,
+            'down': 4,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'down': 1,
+            'ballpos': 25,
+            'firstDown': 35,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
+        })
+
     def test_short_run_cont_win(self):
         self.action_test_helper(init_game = {
             'state': State.SHORT_RUN_CONT,
@@ -529,6 +562,7 @@ class ActionHandlerTest(unittest.TestCase):
             'play': Play.SHORT_RUN,
             'down': 1,
             'ballpos': 10,
+            'firstDown': 20,
             'rsp': {
                 ACTING_PLAYER: None,
                 OPPONENT: 'ROCK'
@@ -552,6 +586,7 @@ class ActionHandlerTest(unittest.TestCase):
             'play': Play.SHORT_RUN,
             'down': 1,
             'ballpos': 10,
+            'firstDown': 20,
             'rsp': {
                 ACTING_PLAYER: None,
                 OPPONENT: 'ROCK'
@@ -595,6 +630,7 @@ class ActionHandlerTest(unittest.TestCase):
             'possession': ACTING_PLAYER,
             'play': Play.SHORT_RUN,
             'ballpos': 20,
+            'firstDown': 25,
             'down': 4,
             'rsp': {
                 ACTING_PLAYER: None,
@@ -617,6 +653,7 @@ class ActionHandlerTest(unittest.TestCase):
             'play': Play.SHORT_RUN,
             'down': 1,
             'ballpos': 20,
+            'firstDown': 30,
             'rsp': {
                 ACTING_PLAYER: None,
                 OPPONENT: 'ROCK'
@@ -640,6 +677,7 @@ class ActionHandlerTest(unittest.TestCase):
             'play': Play.SHORT_RUN,
             'down': 1,
             'ballpos': 20,
+            'firstDown': 30,
             'rsp': {
                 ACTING_PLAYER: None,
                 OPPONENT: 'ROCK'
