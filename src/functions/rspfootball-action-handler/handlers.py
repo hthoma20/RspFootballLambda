@@ -2,11 +2,13 @@ import logging
 import random
 
 import rspmodel
-from rspmodel import KickoffChoice, KickoffElectionChoice, Play, RollAgainChoice, RspChoice, State, TouchbackChoice
+from rspmodel import Action, KickoffChoice, KickoffElectionChoice, PatChoice, Play, RollAgainChoice, RspChoice, State, TouchbackChoice
 from rsputil import get_opponent
 
 class IllegalActionException(Exception):
     pass
+
+GAME_LENGTH = 80
 
 def set_call_play_state(game):
     game.state = State.PLAY_CALL
@@ -27,6 +29,10 @@ def end_play(game):
     if game.ballpos >= 100:
         touchdown(game)
         return
+
+    if game.playCount > GAME_LENGTH:
+        set_game_over_state(game)
+        return
     
     if game.ballpos >= game.firstDown:
         set_first_down(game)
@@ -41,6 +47,13 @@ def set_first_down(game):
     game.down = 1
     game.firstDown = game.ballpos + 10
     game.firstDown = min(game.firstDown, 100)
+
+def set_game_over_state(game):
+    game.state = State.GAME_OVER
+    game.actions = {
+        'home': [],
+        'away': []
+    }
 
 def switch_possession(game):
     game.possession = get_opponent(game.possession)
@@ -362,3 +375,47 @@ class SackActionHandler(RollActionHandler):
             raise Exception(f'Unexpected play [{game.play}] for sack roll')
         
         end_play(game)
+
+class PatChoiceActionHandler(ActionHandler):
+    states = [State.PAT_CHOICE]
+    actions = [rspmodel.PatChoiceAction]
+
+    def handle_action(self, game, player, action):
+        if action.choice == PatChoice.ONE_POINT:
+            game.state = State.EXTRA_POINT
+            game.actions[player] = ['ROLL']
+        else: # choice is TWO_POINT
+            game.state = State.EXTRA_POINT_2
+            game.actions = {
+                'home': ['RSP'],
+                'away': ['RSP']
+            }
+
+def end_pat(game):
+    if game.playCount > GAME_LENGTH:
+        set_game_over_state(game)
+        return
+    
+    game.state = State.KICKOFF_CHOICE
+    game.actions[game.possession] = ['KICKOFF_CHOICE']
+    game.ballpos = 35
+
+class ExtraPointKickActionHandler(RollActionHandler):
+    states = [State.EXTRA_POINT]
+    allowed_counts = [2]
+
+    def handle_roll_action(self, game, roll):
+        
+        if sum(roll) >= 4:
+            game.score[game.possession] += 1
+        
+        end_pat(game)
+
+class TwoPointConversionActionHandler(RspActionHandler):
+    states = [State.EXTRA_POINT_2]
+
+    def handle_rsp_action(self, game, winner):
+        if winner == game.possession:
+            game.score[game.possession] += 2
+        
+        end_pat(game)

@@ -21,12 +21,16 @@ class State(str, Enum):
     FUMBLE = 'FUMBLE'
 
     PAT_CHOICE = 'PAT_CHOICE'
+    EXTRA_POINT = 'EXTRA_POINT'
+    EXTRA_POINT_2 = 'EXTRA_POINT_2'
 
     PLAY_CALL = 'PLAY_CALL'
     SHORT_RUN = 'SHORT_RUN'
     SHORT_RUN_CONT = 'SHORT_RUN_CONT'
 
     SACK_ROLL = 'SACK_ROLL'
+
+    GAME_OVER = 'GAME_OVER'
 
 class Play(str, Enum):
     SHORT_RUN = 'SHORT_RUN'

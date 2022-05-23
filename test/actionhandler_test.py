@@ -532,6 +532,26 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
         })
 
+    def test_short_run_game_over(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN_CONT,
+            'possession': ACTING_PLAYER,
+            'ballpos': 25,
+            'firstDown': 25,
+            'down': 2,
+            'playCount': 80,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.GAME_OVER,
+            'actions': {'home': [], 'away': []}
+        })
+
     def test_short_run_cont_win(self):
         self.action_test_helper(init_game = {
             'state': State.SHORT_RUN_CONT,
@@ -694,6 +714,178 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
         }, roll = [4])
 
+    
+    def test_touchdown_last_play(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_RUN_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_RUN,
+            'playCount': 80,
+            'ballpos': 95,
+            'score': {ACTING_PLAYER: 0, OPPONENT: 0},
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.PAT_CHOICE,
+            'possession': ACTING_PLAYER,
+            'playCount': 81,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0},
+            'actions': {ACTING_PLAYER: ['PAT_CHOICE']}
+        })
+    
+    def test_pat_choice_one_point(self):
+        self.action_test_helper(init_game = {
+            'state': State.PAT_CHOICE,
+            'possession': ACTING_PLAYER,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0}
+        }, action = rspmodel.PatChoiceAction(
+            name = 'PAT_CHOICE',
+            choice = 'ONE_POINT'
+        ), expected_game = {
+            'state': State.EXTRA_POINT,
+            'possession': ACTING_PLAYER,
+            'actions': {ACTING_PLAYER: ['ROLL']}
+        })
+    
+    def test_pat_choice_two_point(self):
+        self.action_test_helper(init_game = {
+            'state': State.PAT_CHOICE,
+            'possession': ACTING_PLAYER,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0}
+        }, action = rspmodel.PatChoiceAction(
+            name = 'PAT_CHOICE',
+            choice = 'TWO_POINT'
+        ), expected_game = {
+            'state': State.EXTRA_POINT_2,
+            'possession': ACTING_PLAYER,
+            'actions': {'home': ['RSP'], 'away': ['RSP']}
+        })
+
+    def test_pat_kick_success(self):
+        self.action_test_helper(init_game = {
+            'state': State.EXTRA_POINT,
+            'possession': ACTING_PLAYER,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0}
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 2
+        ), expected_game = {
+            'state': State.KICKOFF_CHOICE,
+            'possession': ACTING_PLAYER,
+            'actions': {ACTING_PLAYER: ['KICKOFF_CHOICE']},
+            'score': {ACTING_PLAYER: 7, OPPONENT: 0}
+        }, roll = [1, 3])
+    
+    def test_pat_kick_miss(self):
+        self.action_test_helper(init_game = {
+            'state': State.EXTRA_POINT,
+            'possession': ACTING_PLAYER,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0}
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 2
+        ), expected_game = {
+            'state': State.KICKOFF_CHOICE,
+            'possession': ACTING_PLAYER,
+            'actions': {ACTING_PLAYER: ['KICKOFF_CHOICE']},
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0}
+        }, roll = [1, 2])
+
+    def test_pat_kick_game_over(self):
+        self.action_test_helper(init_game = {
+            'state': State.EXTRA_POINT,
+            'possession': ACTING_PLAYER,
+            'playCount': 81,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0}
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 2
+        ), expected_game = {
+            'state': State.GAME_OVER,
+            'possession': ACTING_PLAYER,
+            'actions': {'home': [], 'away': []},
+            'score': {ACTING_PLAYER: 7, OPPONENT: 0}
+        }, roll = [1, 3])
+    
+    def test_two_point_conversion_win(self):
+        self.action_test_helper(init_game = {
+            'state': State.EXTRA_POINT_2,
+            'possession': ACTING_PLAYER,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0},
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.KICKOFF_CHOICE,
+            'possession': ACTING_PLAYER,
+            'actions': {ACTING_PLAYER: ['KICKOFF_CHOICE']},
+            'score': {ACTING_PLAYER: 8, OPPONENT: 0}
+        })
+    
+    def test_two_point_conversion_loss(self):
+        self.action_test_helper(init_game = {
+            'state': State.EXTRA_POINT_2,
+            'possession': ACTING_PLAYER,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0},
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'SCISSORS'
+        ), expected_game = {
+            'state': State.KICKOFF_CHOICE,
+            'possession': ACTING_PLAYER,
+            'actions': {ACTING_PLAYER: ['KICKOFF_CHOICE']},
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0}
+        })
+    
+    def test_two_point_conversion_tie(self):
+        self.action_test_helper(init_game = {
+            'state': State.EXTRA_POINT_2,
+            'possession': ACTING_PLAYER,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0},
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.KICKOFF_CHOICE,
+            'possession': ACTING_PLAYER,
+            'actions': {ACTING_PLAYER: ['KICKOFF_CHOICE']},
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0}
+        })
+    
+    def test_two_point_conversion_last_play(self):
+        self.action_test_helper(init_game = {
+            'state': State.EXTRA_POINT_2,
+            'possession': ACTING_PLAYER,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0},
+            'playCount': 81,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.GAME_OVER,
+            'score': {ACTING_PLAYER: 8, OPPONENT: 0}
+        })
 
 class ActionHandlerRegistrationTest(unittest.TestCase):
 

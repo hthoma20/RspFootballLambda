@@ -70,7 +70,10 @@ ACTION_HANDLERS = [
     handlers.TouchbackChoiceActionHandler(),
     handlers.PlayCallActionHandler(),
     handlers.ShortRunActionHandler(),
-    handlers.SackActionHandler()
+    handlers.SackActionHandler(),
+    handlers.PatChoiceActionHandler(),
+    handlers.ExtraPointKickActionHandler(),
+    handlers.TwoPointConversionActionHandler(),
 ]
 
 # mutate the game in place
