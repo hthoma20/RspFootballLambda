@@ -43,7 +43,7 @@ BASE_GAME = rspmodel.Game(
             'home': ['POLL'],
             'away': ['POLL']
         },
-        result = None)
+        result = [])
 
 def mock_roll(roll):
     import random
@@ -111,11 +111,11 @@ class ActionHandlerTest(unittest.TestCase):
                 OPPONENT: None,
                 ACTING_PLAYER: None
             },
-            'result': rspmodel.RspResult(
+            'result': [rspmodel.RspResult(
                 name = 'RSP',
                 home = 'ROCK',
                 away = 'ROCK'
-            )
+            )]
         })
 
     def test_coin_toss_win(self):
@@ -134,11 +134,11 @@ class ActionHandlerTest(unittest.TestCase):
                 OPPONENT: None,
                 ACTING_PLAYER: None
             },
-            'result': rspmodel.RspResult(**{
+            'result': [rspmodel.RspResult(**{
                 'name': 'RSP',
                 ACTING_PLAYER: 'PAPER',
                 OPPONENT: 'ROCK'
-            })
+            })]
         })
     
     def test_kickoff_election(self):

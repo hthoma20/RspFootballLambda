@@ -40,7 +40,7 @@ def lambda_handler(event, context):
             return rsputil.api_client_error('Action not allowed')
 
         version = game.version
-        game.result = None
+        game.result = []
         game.actions = {'home': ['POLL'], 'away': ['POLL']}
 
         try:

@@ -73,7 +73,7 @@ class Game(BaseModel):
     penalties: dict[Player, int]
 
     actions: dict[Player, list[str]]
-    result: Optional[Result]
+    result: list[Result]
 
 
 class RspAction(BaseModel):

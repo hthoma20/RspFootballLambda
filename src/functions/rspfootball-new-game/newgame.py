@@ -67,5 +67,5 @@ def new_game(game_id):
             'home': ['RSP'],
             'away': ['RSP']
         },
-        result = None
+        result = []
     )

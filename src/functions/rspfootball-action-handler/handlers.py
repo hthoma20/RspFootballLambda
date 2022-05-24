@@ -123,10 +123,10 @@ class RspActionHandler(ActionHandler):
         opponent = get_opponent(player)
 
         if game.rsp[opponent]:
-            game.result = rspmodel.RspResult(
+            game.result += [rspmodel.RspResult(
                 home = game.rsp['home'],
                 away = game.rsp['away']
-            )
+            )]
             winner = self.get_rsp_winner(game.rsp)
             logging.info(f'RSP winner: {winner}')
             game.rsp = {
@@ -184,7 +184,7 @@ class RollActionHandler(ActionHandler):
             raise IllegalActionException(f'Must roll {self.allowed_counts} dice in state {game.state}')
         
         roll = roll_dice(action.count)
-        game.result = rspmodel.RollResult(roll=roll)
+        game.result += [rspmodel.RollResult(roll=roll)]
         self.handle_roll_action(game, roll)
 
 class KickoffActionHandler(RollActionHandler):
@@ -278,7 +278,7 @@ class KickReturn1ActionHandler(ActionHandler):
         
         # choice is ROLL
         roll = roll_dice(count=1)
-        game.result = rspmodel.RollResult(roll=roll)
+        game.result += [rspmodel.RollResult(roll=roll)]
 
         [roll] = roll
         game.ballpos += 5 * roll

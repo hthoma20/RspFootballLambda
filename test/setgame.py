@@ -37,7 +37,7 @@ DEFAULT_GAME = rspmodel.Game(
             'home': ['CALL_PLAY', 'PENALTY'],
             'away': ['POLL']
         },
-        result = None)
+        result = [])
 
 def set_game(overrides):
     game = {**DEFAULT_GAME.dict(), **overrides}
