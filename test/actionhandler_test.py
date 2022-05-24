@@ -886,6 +886,47 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.GAME_OVER,
             'score': {ACTING_PLAYER: 8, OPPONENT: 0}
         })
+    
+    def test_safety(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.SHORT_RUN,
+            'down': 1,
+            'ballpos': 5,
+            'firstDown': 30,
+            'playCount': 1,
+            'score': {ACTING_PLAYER: 0, OPPONENT: 0}
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 1
+        ), expected_game = {
+            'state': State.KICKOFF_CHOICE,
+            'possession': OPPONENT,
+            'play': None,
+            'ballpos': 20,
+            'actions': {OPPONENT: ['KICKOFF_CHOICE']},
+            'playCount': 2,
+            'score': {ACTING_PLAYER: 2, OPPONENT: 0}
+        }, roll = [5])
+    
+    def test_safety_last_play(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.SHORT_RUN,
+            'down': 1,
+            'ballpos': 5,
+            'firstDown': 30,
+            'playCount': 80,
+            'score': {ACTING_PLAYER: 0, OPPONENT: 0}
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 1
+        ), expected_game = {
+            'state': State.GAME_OVER,
+            'score': {ACTING_PLAYER: 2, OPPONENT: 0}
+        }, roll = [5])
 
 class ActionHandlerRegistrationTest(unittest.TestCase):
 

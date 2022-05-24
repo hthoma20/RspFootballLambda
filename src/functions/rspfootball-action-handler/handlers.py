@@ -16,18 +16,40 @@ def set_call_play_state(game):
     game.actions[get_opponent(game.possession)] = ['POLL', 'PENALTY']
     game.play = None
 
+def set_kickoff_state(game, yardline):
+    game.ballpos = yardline
+    game.firstDown = None
+    
+    game.state = State.KICKOFF_CHOICE
+    game.actions[game.possession] = ['KICKOFF_CHOICE']
+
+
 def touchdown(game):
     game.score[game.possession] += 6
     game.state = State.PAT_CHOICE
     game.actions[game.possession] = ['PAT_CHOICE']
 
+def safety(game):
+    game.score[get_opponent(game.possession)] += 2
+
+    if game.playCount > GAME_LENGTH:
+        set_game_over_state(game)    
+    else:
+        set_kickoff_state(game, 20)
+
+
 def end_play(game):
 
+    game.play = None
     game.playCount += 1
     game.down += 1
 
     if game.ballpos >= 100:
         touchdown(game)
+        return
+    
+    if game.ballpos <= 0:
+        safety(game)
         return
 
     if game.playCount > GAME_LENGTH:
@@ -39,7 +61,6 @@ def end_play(game):
     elif game.down > 4:
         switch_possession(game)
         set_first_down(game)
-    
     
     set_call_play_state(game)
 
@@ -277,7 +298,6 @@ class KickoffElectionActionHandler(ActionHandler):
     actions = [rspmodel.KickoffElectionAction]
 
     def handle_action(self, game, player, action):
-        game.state = State.KICKOFF_CHOICE
 
         if action.choice == KickoffElectionChoice.KICK:
             kicker = player
@@ -286,7 +306,8 @@ class KickoffElectionActionHandler(ActionHandler):
         
         game.firstKick = kicker
         game.possession = kicker
-        game.actions[kicker] = ['KICKOFF_CHOICE']
+
+        set_kickoff_state(game, 35)
 
 class KickoffChoiceActionHandler(ActionHandler):
     states = [State.KICKOFF_CHOICE]
@@ -394,11 +415,9 @@ class PatChoiceActionHandler(ActionHandler):
 def end_pat(game):
     if game.playCount > GAME_LENGTH:
         set_game_over_state(game)
-        return
-    
-    game.state = State.KICKOFF_CHOICE
-    game.actions[game.possession] = ['KICKOFF_CHOICE']
-    game.ballpos = 35
+    else:
+        set_kickoff_state(game, 35)
+
 
 class ExtraPointKickActionHandler(RollActionHandler):
     states = [State.EXTRA_POINT]

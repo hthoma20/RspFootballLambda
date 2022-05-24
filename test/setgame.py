@@ -23,9 +23,10 @@ DEFAULT_GAME = rspmodel.Game(
         },
         possession = 'home',
         firstKick = 'home',
-        ballpos = 35,
+        ballpos = 5,
         playCount = 1,
         down = 1,
+        firstDown = 20,
         play = None,
         rsp = {
             'home': None,
