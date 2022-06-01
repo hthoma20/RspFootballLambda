@@ -49,6 +49,6 @@ if __name__ == '__main__':
     overrides = {}
     for arg in sys.argv[1:]:
         key, val = arg.split('=')
-        overrides[key] = value
+        overrides[key] = val
 
     set_game(overrides)

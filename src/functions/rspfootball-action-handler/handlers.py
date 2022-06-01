@@ -31,6 +31,7 @@ def touchdown(game):
 
 def safety(game):
     game.score[get_opponent(game.possession)] += 2
+    game.result += [rspmodel.SafetyResult()]
 
     if game.playCount > GAME_LENGTH:
         set_game_over_state(game)    

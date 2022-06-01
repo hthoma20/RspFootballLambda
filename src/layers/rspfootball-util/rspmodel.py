@@ -49,7 +49,10 @@ class RollResult(BaseModel):
     name: Literal['ROLL'] = 'ROLL'
     roll: list[int]
 
-Result = Union[RspResult, RollResult]
+class SafetyResult(BaseModel):
+    name: Literal['SAFETY'] = 'SAFETY'
+
+Result = Union[RspResult, RollResult, SafetyResult]
 
 class Game(BaseModel):
     gameId: str

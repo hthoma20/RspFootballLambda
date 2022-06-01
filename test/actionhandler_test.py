@@ -907,7 +907,8 @@ class ActionHandlerTest(unittest.TestCase):
             'ballpos': 20,
             'actions': {OPPONENT: ['KICKOFF_CHOICE']},
             'playCount': 2,
-            'score': {ACTING_PLAYER: 2, OPPONENT: 0}
+            'score': {ACTING_PLAYER: 2, OPPONENT: 0},
+            'result': [{'name': 'ROLL', 'roll': [5]}, {'name': 'SAFETY'}]
         }, roll = [5])
     
     def test_safety_last_play(self):
@@ -925,7 +926,8 @@ class ActionHandlerTest(unittest.TestCase):
             count = 1
         ), expected_game = {
             'state': State.GAME_OVER,
-            'score': {ACTING_PLAYER: 2, OPPONENT: 0}
+            'score': {ACTING_PLAYER: 2, OPPONENT: 0},
+            'result': [{'name': 'ROLL', 'roll': [5]}, {'name': 'SAFETY'}]
         }, roll = [5])
 
 class ActionHandlerRegistrationTest(unittest.TestCase):
