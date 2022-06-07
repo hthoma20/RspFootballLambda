@@ -344,8 +344,10 @@ class PlayCallActionHandler(ActionHandler):
     def handle_action(self, game, player, action):
         game.play = action.play
 
-        if game.play == Play.SHORT_RUN:
+        if action.play == Play.SHORT_RUN:
             game.state = State.SHORT_RUN
+        elif action.play == Play.LONG_RUN:
+            game.state = State.LONG_RUN
         else:
             raise IllegalActionException("Unexpected play")
         
@@ -382,6 +384,36 @@ class ShortRunActionHandler(RspActionHandler):
         else:
             end_play(game)
 
+class LongRunActionHandler(RspActionHandler):
+    states = [State.LONG_RUN]
+
+    def handle_rsp_action(self, game, winner):
+        if winner == game.possession:
+            game.state = State.LONG_RUN_ROLL
+            game.actions[game.possession] = ['ROLL']
+        elif winner == get_opponent(game.possession):
+            game.state = State.SACK_ROLL
+            game.actions[get_opponent(game.possession)] = ['ROLL']
+        else:
+            end_play(game)
+
+class LongRunRollActionHandler(RollActionHandler):
+    states = [State.LONG_RUN_ROLL]
+    allowed_counts = [1]
+
+    def handle_roll_action(self, game, roll):
+        [roll] = roll
+        game.ballpos += roll*5
+
+        if roll == 1:
+            game.state = State.FUMBLE
+            game.actions = {
+                'home': ['RSP'],
+                'away': ['RSP']
+            }
+        else:
+            end_play(game)
+
 class SackActionHandler(RollActionHandler):
     states = [State.SACK_ROLL]
     allowed_counts = [1]
@@ -393,10 +425,45 @@ class SackActionHandler(RollActionHandler):
         if game.play == Play.SHORT_RUN:
             if roll >= 5:
                 game.ballpos -= 5
+        elif game.play == Play.LONG_RUN:
+            sack_distance = 10 if roll == 6 else 5
+            game.ballpos -= sack_distance
         else:
             raise Exception(f'Unexpected play [{game.play}] for sack roll')
         
         end_play(game)
+
+class FumbleActionHandler(RspActionHandler):
+    states = [State.FUMBLE]
+
+    def handle_rsp_action(self, game, winner):
+        # A fumble occurs in one of three situations:
+        # A kickoff return, a punt return, or a long run
+
+        # The player with possession has the "advantage" - a win or tie
+        # retains possession
+        if winner == get_opponent(game.possession):
+            
+            # calling end_play will count the safety
+            if game.ballpos <= 0:
+                end_play(game)
+                return
+
+            switch_possession(game)
+
+            # this means we are about to end the play, and it should be first down for the
+            # recovering player
+            if game.play:
+                if game.ballpos <= 0:
+                    game.ballpos = 20
+                    set_first_down(game)
+                    game.down = 0
+
+        # if this is a punt return or long run
+        if game.play:
+            end_play(game)
+        else:
+            set_call_play_state(game)
 
 class PatChoiceActionHandler(ActionHandler):
     states = [State.PAT_CHOICE]

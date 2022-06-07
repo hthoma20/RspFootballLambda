@@ -21,6 +21,8 @@ def lambda_handler(event, context):
     try:
         request = rspmodel.ActionRequest(**body)
     except ValidationError as e:
+        print(e)
+        print("\n\n\n\n\n\n\n")
         return rsputil.api_client_error(f'Illegal request: {e}')
 
 
@@ -70,10 +72,13 @@ ACTION_HANDLERS = [
     handlers.TouchbackChoiceActionHandler(),
     handlers.PlayCallActionHandler(),
     handlers.ShortRunActionHandler(),
+    handlers.LongRunActionHandler(),
+    handlers.LongRunRollActionHandler(),
     handlers.SackActionHandler(),
     handlers.PatChoiceActionHandler(),
     handlers.ExtraPointKickActionHandler(),
     handlers.TwoPointConversionActionHandler(),
+    handlers.FumbleActionHandler()
 ]
 
 # mutate the game in place

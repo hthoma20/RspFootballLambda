@@ -1,3 +1,4 @@
+from lib2to3.pgen2.token import OP
 import unittest
 import sys
 
@@ -386,6 +387,49 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
         })
     
+    def test_kickoff_return_fumble_retain(self):
+        self.action_test_helper(init_game = {
+            'state': State.FUMBLE,
+            'play': None,
+            'possession': ACTING_PLAYER,
+            'playCount': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK' # Tie should retain
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']},
+            'possession': ACTING_PLAYER,
+            'playCount': 10
+        })
+    
+    def test_kickoff_return_fumble_turnover(self):
+        self.action_test_helper(init_game = {
+            'state': State.FUMBLE,
+            'play': None,
+            'possession': ACTING_PLAYER,
+            'ballpos': 40,
+            'playCount': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'SCISSORS'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']},
+            'possession': OPPONENT,
+            'ballpos': 60,
+            'playCount': 10
+        })
+
+    
     def test_play_call_short_run(self):
         self.action_test_helper(init_game = {
             'state': State.PLAY_CALL,
@@ -714,6 +758,307 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
         }, roll = [4])
 
+    
+    def test_play_call_long_run(self):
+        self.action_test_helper(init_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+        }, action = rspmodel.CallPlayAction(
+            name = 'CALL_PLAY',
+            play = 'LONG_RUN'
+        ), expected_game = {
+            'state': State.LONG_RUN,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'actions': {'home': ['RSP'], 'away': ['RSP']}
+        })
+    
+    def test_long_run_win(self):
+        self.action_test_helper(init_game = {
+            'state': State.LONG_RUN,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'ballpos': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.LONG_RUN_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'ballpos': 10,
+            'actions': {ACTING_PLAYER: ['ROLL'], OPPONENT: ['POLL']}
+        })
+    
+    def test_long_run_loss(self):
+        self.action_test_helper(init_game = {
+            'state': State.LONG_RUN,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'ballpos': 20,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'SCISSORS'
+        ), expected_game = {
+            'state': State.SACK_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'ballpos': 20,
+            'actions': {OPPONENT: ['ROLL'], ACTING_PLAYER: ['POLL']}
+        })
+    
+    def test_long_run_tie(self):
+        self.action_test_helper(init_game = {
+            'state': State.LONG_RUN,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'ballpos': 20,
+            'firstDown': 30,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 20,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']}
+        })
+    
+    def test_long_run_roll_fumble(self):
+        self.action_test_helper(init_game = {
+            'state': State.LONG_RUN_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'playCount': 10,
+            'ballpos': 20,
+            'firstDown': 30
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 1
+        ), expected_game = {
+            'state': State.FUMBLE,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'playCount': 10,
+            'ballpos': 25,
+            'actions': {ACTING_PLAYER: ['RSP'], OPPONENT: ['RSP']}
+        }, roll = [1])
+    
+    def test_long_run_roll_regular(self):
+        self.action_test_helper(init_game = {
+            'state': State.LONG_RUN_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'playCount': 10,
+            'ballpos': 20,
+            'firstDown': 30
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'playCount': 11,
+            'ballpos': 35,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']}
+        }, roll = [3])
+    
+    def test_long_run_roll_recover(self):
+        self.action_test_helper(init_game = {
+            'state': State.FUMBLE,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'playCount': 10,
+            'down': 1,
+            'ballpos': 20,
+            'firstDown': 30,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'playCount': 11,
+            'down': 2,
+            'ballpos': 20,
+            'firstDown': 30,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']}
+        })
+    
+    def test_long_run_roll_recover_touchdown(self):
+        self.action_test_helper(init_game = {
+            'state': State.FUMBLE,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'playCount': 10,
+            'down': 1,
+            'ballpos': 100,
+            'firstDown': 100,
+            'score': {ACTING_PLAYER: 0, OPPONENT: 0},
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PAT_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'playCount': 11,
+            'down': 2,
+            'score': {ACTING_PLAYER: 6, OPPONENT: 0},
+            'actions': {ACTING_PLAYER: ['PAT_CHOICE'], OPPONENT: ['POLL']}
+        })
+    
+    def test_long_run_roll_recover_fourth_down(self):
+        self.action_test_helper(init_game = {
+            'state': State.FUMBLE,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'playCount': 10,
+            'down': 4,
+            'ballpos': 20,
+            'firstDown': 25,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'playCount': 11,
+            'down': 1,
+            'ballpos': 80,
+            'firstDown': 90,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']}
+        })
+
+    def test_long_run_roll_turnover(self):
+        self.action_test_helper(init_game = {
+            'state': State.FUMBLE,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'playCount': 10,
+            'down': 1,
+            'ballpos': 20,
+            'firstDown': 25,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'SCISSORS'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'playCount': 11,
+            'down': 1,
+            'ballpos': 80,
+            'firstDown': 90,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']}
+        })
+
+    def test_long_run_roll_turnover_touchback(self):
+        self.action_test_helper(init_game = {
+            'state': State.FUMBLE,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'playCount': 10,
+            'down': 4,
+            'ballpos': 100,
+            'firstDown': 100,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'SCISSORS'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'playCount': 11,
+            'down': 1,
+            'ballpos': 20,
+            'firstDown': 30,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']}
+        })
+    
+    def test_long_run_sack_five(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.LONG_RUN,
+            'down': 1,
+            'ballpos': 20,
+            'firstDown': 30,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'ballpos': 15,
+            'down': 2,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+        }, roll = [1])
+
+    def test_long_run_sack_ten(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.LONG_RUN,
+            'down': 1,
+            'ballpos': 20,
+            'firstDown': 30,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAction(
+            name = 'ROLL',
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'ballpos': 10,
+            'down': 2,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+        }, roll = [6])
     
     def test_touchdown_last_play(self):
         self.action_test_helper(init_game = {
