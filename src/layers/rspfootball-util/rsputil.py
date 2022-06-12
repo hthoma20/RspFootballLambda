@@ -32,6 +32,20 @@ def get_event_body(event):
     
     return None
 
+def get_event_query_params(event):
+    if 'queryStringParameters' not in event:
+        return None
+    
+    query_params = event['queryStringParameters']
+    
+    if type(query_params) in [str, bytes]:
+        return json.loads(query_params)
+    
+    if type(query_params) is dict:
+        return query_params
+    
+    return None
+
 def api_response(status, body):
     return {
         'statusCode': status,

@@ -141,3 +141,7 @@ class ActionRequest(BaseModel):
     gameId: str
     user: str
     action: Action
+
+class ListGamesQuery(BaseModel):
+    available: bool = True # Whether to return available games
+    user: Optional[str] # If supplied, all games with the given player are returned

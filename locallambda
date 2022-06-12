@@ -20,7 +20,8 @@ for layer in os.listdir('src/layers'):
 
 parser = argparse.ArgumentParser(description='Invoke local versions of lambda functions')
 parser.add_argument('--module', '-m', help='the module name of the lambda code')
-parser.add_argument('--body', '-d', '-b', default='', help='body to pass to the lambda, as if in the body of a request')
+parser.add_argument('--body', '-b', default='', help='body to pass to the lambda, as if in the body of a request')
+parser.add_argument('--queryParams', '-q', default='{}', help='dict of query params to pass to the lambda')
 parser.add_argument('--roll', required=False, nargs='+', help='provide values for any rolls in this invocation')
 
 args = parser.parse_args()
@@ -35,5 +36,7 @@ if args.roll:
     random.randint = mock_roll 
 
 lambda_module = importlib.import_module(args.module)
-result = lambda_module.lambda_handler({'body': args.body}, None)
+result = lambda_module.lambda_handler({
+    'body': args.body,
+    'queryStringParameters': args.queryParams}, None)
 print(result)
