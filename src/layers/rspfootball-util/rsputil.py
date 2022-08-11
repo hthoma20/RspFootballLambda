@@ -34,7 +34,7 @@ def get_event_body(event):
 
 def get_event_query_params(event):
     if 'queryStringParameters' not in event:
-        return None
+        return {}
     
     query_params = event['queryStringParameters']
     

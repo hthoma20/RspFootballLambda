@@ -1,0 +1,52 @@
+@startuml
+
+participant Client
+participant Opponent
+participant ActionHandler as AH
+participant Poller
+
+group opponent roll
+Client -> AH: action (RSP)
+AH -> Client: game (POLL)
+Client -> Poller: poll
+note over Poller
+Wait for opponent action
+or timeout (15s)
+endnote
+Poller -> Client: game
+end
+
+group penalty call
+Client -> AH: action
+AH -> Client: game (PENALTY, POLL)
+Client -> Poller: poll
+note over Poller
+polling
+endnote
+Client -> AH: action (PENALTY)
+AH -> Client: game (RSP)
+Poller -> Client: game (RSP)
+note right of Client
+in this case, the ActionHandler and
+poller will return the same version
+of the game
+endnote
+end
+
+group conflict
+Client -> AH: action (RSP)
+AH -> Client: game (POLL)
+Client -> Poller: poll
+Opponent -> AH: action (RSP)
+AH -> Opponent: game (CALL_PLAY)
+Poller -> Client: game (POLL, PENALTY)
+Client -> Poller: poll
+Opponent -> AH: action (CALL_PLAY)
+AH -> Opponent: game (RSP)
+Poller -> Client: game (RSP)
+note over Client
+Client is still playing RSP animation
+endnote
+end
+
+@enduml
