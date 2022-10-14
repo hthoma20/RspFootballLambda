@@ -185,7 +185,7 @@ class RollActionHandler(ActionHandler):
             raise IllegalActionException(f'Must roll {self.allowed_counts} dice in state {game.state}')
         
         roll = roll_dice(action.count)
-        game.result += [rspmodel.RollResult(roll=roll)]
+        game.result += [rspmodel.RollResult(roll=roll, player=player)]
         self.handle_roll_action(game, roll)
 
 class KickoffActionHandler(RollActionHandler):
@@ -279,7 +279,7 @@ class KickReturn1ActionHandler(ActionHandler):
         
         # choice is ROLL
         roll = roll_dice(count=1)
-        game.result += [rspmodel.RollResult(roll=roll)]
+        game.result += [rspmodel.RollResult(roll=roll, player=player)]
 
         [roll] = roll
         game.ballpos += 5 * roll

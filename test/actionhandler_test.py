@@ -1253,7 +1253,7 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {OPPONENT: ['KICKOFF_CHOICE']},
             'playCount': 2,
             'score': {ACTING_PLAYER: 2, OPPONENT: 0},
-            'result': [{'name': 'ROLL', 'roll': [5]}, {'name': 'SAFETY'}]
+            'result': [{'name': 'ROLL', 'player': ACTING_PLAYER, 'roll': [5]}, {'name': 'SAFETY'}]
         }, roll = [5])
     
     def test_safety_last_play(self):
@@ -1272,7 +1272,7 @@ class ActionHandlerTest(unittest.TestCase):
         ), expected_game = {
             'state': State.GAME_OVER,
             'score': {ACTING_PLAYER: 2, OPPONENT: 0},
-            'result': [{'name': 'ROLL', 'roll': [5]}, {'name': 'SAFETY'}]
+            'result': [{'name': 'ROLL', 'player': ACTING_PLAYER, 'roll': [5]}, {'name': 'SAFETY'}]
         }, roll = [5])
 
 class ActionHandlerRegistrationTest(unittest.TestCase):

@@ -50,6 +50,7 @@ class RspResult(BaseModel):
 
 class RollResult(BaseModel):
     name: Literal['ROLL'] = 'ROLL'
+    player: Player
     roll: list[int]
 
 class SafetyResult(BaseModel):
