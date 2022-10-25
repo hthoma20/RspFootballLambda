@@ -25,12 +25,16 @@ class State(str, Enum):
     SHORT_RUN_CONT = 'SHORT_RUN_CONT'
     LONG_RUN = 'LONG_RUN'
     LONG_RUN_ROLL = 'LONG_RUN_ROLL'
+    SHORT_PASS = 'SHORT_PASS'
+    SHORT_PASS_CONT = 'SHORT_PASS_CONT'
+    SACK_CHOICE = 'SACK_CHOICE'
     SACK_ROLL = 'SACK_ROLL'
     GAME_OVER = 'GAME_OVER'
 
 class Play(str, Enum):
     SHORT_RUN = 'SHORT_RUN'
     LONG_RUN = 'LONG_RUN'
+    SHORT_PASS = 'SHORT_PASS'
 
 class RspChoice(str, Enum):
     ROCK = 'ROCK'
@@ -56,6 +60,10 @@ class RollAgainChoice(str, Enum):
 class PatChoice(str, Enum):
     ONE_POINT = 'ONE_POINT'
     TWO_POINT = 'TWO_POINT'
+
+class SackChoice(str, Enum):
+    SACK = 'SACK'
+    PICK = 'PICK'
 
 class RspAction(BaseModel):
     name: Literal['RSP'] = 'RSP'
@@ -89,7 +97,11 @@ class PatChoiceAction(BaseModel):
     name: Literal['PAT_CHOICE'] = 'PAT_CHOICE'
     choice: PatChoice
 
-Action = Union[RspAction, RollAction, KickoffElectionAction, KickoffChoiceAction, CallPlayAction, TouchbackChoiceAction, RollAgainChoiceAction, PatChoiceAction]
+class SackChoiceAction(BaseModel):
+    name: Literal['SACK_CHOICE'] = 'SACK_CHOICE'
+    choice: SackChoice
+
+Action = Union[RspAction, RollAction, KickoffElectionAction, KickoffChoiceAction, CallPlayAction, TouchbackChoiceAction, RollAgainChoiceAction, PatChoiceAction, SackChoiceAction]
 
 class RspResult(BaseModel):
     name: Literal['RSP'] = 'RSP'
@@ -104,7 +116,13 @@ class RollResult(BaseModel):
 class SafetyResult(BaseModel):
     name: Literal['SAFETY'] = 'SAFETY'
 
-Result = Union[RspResult, RollResult, SafetyResult]
+class GainResult(BaseModel):
+    name: Literal['GAIN'] = 'GAIN'
+    play: Play
+    player: Player
+    yards: int
+
+Result = Union[RspResult, RollResult, SafetyResult, GainResult]
 
 class Game(BaseModel):
     gameId: str

@@ -348,6 +348,8 @@ class PlayCallActionHandler(ActionHandler):
             game.state = State.SHORT_RUN
         elif action.play == Play.LONG_RUN:
             game.state = State.LONG_RUN
+        elif action.play == Play.SHORT_PASS:
+            game.state = State.SHORT_PASS
         else:
             raise IllegalActionException("Unexpected play")
         
@@ -411,6 +413,39 @@ class LongRunRollActionHandler(RollActionHandler):
                 'home': ['RSP'],
                 'away': ['RSP']
             }
+        else:
+            end_play(game)
+
+class ShortPassActionHandler(RspActionHandler):
+    states = [State.SHORT_PASS, State.SHORT_PASS_CONT]
+
+    def handle_rsp_action(self, game, winner):
+        opponent = get_opponent(game.possession)
+
+        # if this is a continuation, we can treat a loss as a tie
+        if game.state == State.SHORT_PASS_CONT and winner == opponent:
+            winner = None
+        
+        if winner == game.possession:
+            game.ballpos += 10
+            game.result += [rspmodel.GainResult(
+                play = Play.SHORT_PASS,
+                player = game.possession,
+                yards = 10
+            )]
+            
+            if game.ballpos >= 100:
+                end_play(game)
+            else:
+                game.state = State.SHORT_PASS_CONT
+                game.actions = {
+                    'home': ['RSP'],
+                    'away': ['RSP']
+                }
+        elif winner == opponent:
+            game.state = State.SACK_CHOICE
+            game.actions[opponent] = ['SACK_CHOICE']
+
         else:
             end_play(game)
 

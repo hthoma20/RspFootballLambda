@@ -6,7 +6,7 @@ sys.path.append(f'src/layers/rspfootball-util')
 sys.path.append(f'src/functions/rspfootball-action-handler')
 
 import rspmodel
-from rspmodel import KickoffChoiceAction, Play, State
+from rspmodel import GainResult, KickoffChoiceAction, Play, State
 import rsputil
 import actionhandler
 
@@ -51,6 +51,28 @@ def mock_roll(roll):
     roll_iter = iter(roll)
     random.randint = lambda min, max: next(roll_iter) 
 
+
+class AssertionPredicate:
+
+    def __init__(self, predicate):
+        self.predicate = predicate
+
+    # return a tuple with the result, and an optional assertion failure message
+    def test(self, value):
+        return self.predicate(value)
+
+    # Return a predicate that passes if a test object contains
+    # all of the given elements in the collection
+    @staticmethod
+    def containsAll(requiredValues):
+        def predicate(collection):
+            for requiredValue in requiredValues:
+                if requiredValue not in collection:
+                    return False, 'Collection missing required value: ' + str(requiredValue)
+            return True, None
+
+        return AssertionPredicate(predicate)
+
 class ActionHandlerTest(unittest.TestCase):
 
     # assert that all the expected keys and values are present
@@ -64,8 +86,11 @@ class ActionHandlerTest(unittest.TestCase):
 
             if type(expected[key]) is dict:
                 self.assertValues(actual[key], expected[key])
+            elif isinstance(expected[key], AssertionPredicate):
+                assertionValue, message = expected[key].test(actual[key])
+                self.assertTrue(assertionValue, f'{message}: key {key}')
             else:
-                self.assertEqual(actual[key], expected_value)
+                self.assertEqual(actual[key], expected_value, f'key {key}')
 
 
     # merge the given init_game into BASE_GAME
@@ -1059,7 +1084,154 @@ class ActionHandlerTest(unittest.TestCase):
             'down': 2,
             'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
         }, roll = [6])
+
+    def test_short_pass_win(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_PASS,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_PASS,
+            'ballpos': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.SHORT_PASS_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_PASS,
+            'ballpos': 20,
+            'actions': {'home': ['RSP'], 'away': ['RSP']},
+            'result': AssertionPredicate.containsAll([GainResult(
+                play = Play.SHORT_PASS,
+                player = ACTING_PLAYER,
+                yards = 10
+            )])
+        })
     
+    def test_short_pass_loss(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_PASS,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_PASS,
+            'ballpos': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'SCISSORS'
+        ), expected_game = {
+            'state': State.SACK_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_PASS,
+            'ballpos': 10,
+            'actions': {OPPONENT: ['SACK_CHOICE']},
+        })
+    
+    def test_short_pass_tie(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_PASS,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_PASS,
+            'down': 1,
+            'ballpos': 10,
+            'firstDown': 20,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'down': 2,
+            'ballpos': 10,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']}
+        })
+
+    def test_short_pass_cont_win(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_PASS_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_PASS,
+            'ballpos': 20,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.SHORT_PASS_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_PASS,
+            'ballpos': 30,
+            'actions': {'home': ['RSP'], 'away': ['RSP']},
+            'result': AssertionPredicate.containsAll([GainResult(
+                play = Play.SHORT_PASS,
+                player = ACTING_PLAYER,
+                yards = 10
+            )])
+        })
+
+    def test_short_pass_cont_loss(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_PASS_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_PASS,
+            'ballpos': 20,
+            'firstDown': 30,
+            'down': 1,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'SCISSORS'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 20,
+            'firstDown': 30,
+            'down': 2,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']},
+        })
+
+    def test_short_pass_cont_tie(self):
+        self.action_test_helper(init_game = {
+            'state': State.SHORT_PASS_CONT,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_PASS,
+            'ballpos': 20,
+            'firstDown': 30,
+            'down': 1,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 20,
+            'firstDown': 30,
+            'down': 2,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']},
+        })
+
     def test_touchdown_last_play(self):
         self.action_test_helper(init_game = {
             'state': State.SHORT_RUN_CONT,
