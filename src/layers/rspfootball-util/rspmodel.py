@@ -122,7 +122,13 @@ class GainResult(BaseModel):
     player: Player
     yards: int
 
-Result = Union[RspResult, RollResult, SafetyResult, GainResult]
+class LossResult(BaseModel):
+    name: Literal['LOSS'] = 'LOSS'
+    play: Play
+    player: Player
+    yards: int
+
+Result = Union[RspResult, RollResult, SafetyResult, GainResult, LossResult]
 
 class Game(BaseModel):
     gameId: str

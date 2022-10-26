@@ -1,0 +1,3 @@
+export LOG_LEVEL=INFO
+export MAX_POLL_TIME=10
+export POLL_INTERVAL=0.5

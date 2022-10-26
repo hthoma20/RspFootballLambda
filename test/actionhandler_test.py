@@ -6,7 +6,7 @@ sys.path.append(f'src/layers/rspfootball-util')
 sys.path.append(f'src/functions/rspfootball-action-handler')
 
 import rspmodel
-from rspmodel import GainResult, KickoffChoiceAction, Play, State
+from rspmodel import GainResult, KickoffChoiceAction, LossResult, Play, State
 import rsputil
 import actionhandler
 
@@ -1230,6 +1230,31 @@ class ActionHandlerTest(unittest.TestCase):
             'firstDown': 30,
             'down': 2,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']},
+        })
+
+    def test_short_pass_sack_choice_sack(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_CHOICE,
+            'possession': OPPONENT,
+            'play': Play.SHORT_PASS,
+            'ballpos': 20,
+            'down': 1,
+            'firstDown': 30
+        }, action = rspmodel.SackChoiceAction(
+            choice = 'SACK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'ballpos': 15,
+            'down': 2,
+            'firstDown': 30,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([LossResult(
+                player = OPPONENT,
+                play = Play.SHORT_PASS,
+                yards = 5
+            )])
         })
 
     def test_touchdown_last_play(self):

@@ -2,7 +2,7 @@ import logging
 import random
 
 import rspmodel
-from rspmodel import Action, KickoffChoice, KickoffElectionChoice, PatChoice, Play, RollAgainChoice, RspChoice, State, TouchbackChoice
+from rspmodel import Action, KickoffChoice, KickoffElectionChoice, PatChoice, Play, RollAgainChoice, RspChoice, SackChoice, State, TouchbackChoice
 from rsputil import get_opponent
 
 class IllegalActionException(Exception):
@@ -499,6 +499,37 @@ class FumbleActionHandler(RspActionHandler):
             end_play(game)
         else:
             set_call_play_state(game)
+
+class SackChoiceActionHandler(ActionHandler):
+    states = [State.SACK_CHOICE]
+    actions = [rspmodel.SackChoiceAction]
+
+    def handle_action(self, game, player, action):
+        if action.choice == SackChoice.SACK:
+            self.handle_sack_choice(game, player)
+        else: # choice is PICK
+            self.handle_pick_choice(game, player)
+
+    def get_sack_yards(self, play):
+        if play == Play.SHORT_PASS:
+            return 5
+        
+        raise Exception(f'Unexpected play for SackChoice: {play}')
+
+    def handle_sack_choice(self, game, player):
+        sack_yards = self.get_sack_yards(game.play)
+
+        game.ballpos -= sack_yards
+        game.result += [rspmodel.LossResult(
+            play = game.play,
+            player = game.possession,
+            yards = sack_yards
+        )]
+
+        end_play(game)
+
+    def handle_pick_choice(self, game, player):
+        pass
 
 class PatChoiceActionHandler(ActionHandler):
     states = [State.PAT_CHOICE]

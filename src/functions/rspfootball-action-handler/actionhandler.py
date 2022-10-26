@@ -76,6 +76,7 @@ ACTION_HANDLERS = [
     handlers.LongRunRollActionHandler(),
     handlers.ShortPassActionHandler(),
     handlers.SackActionHandler(),
+    handlers.SackChoiceActionHandler(),
     handlers.PatChoiceActionHandler(),
     handlers.ExtraPointKickActionHandler(),
     handlers.TwoPointConversionActionHandler(),
