@@ -6,7 +6,7 @@ sys.path.append(f'src/layers/rspfootball-util')
 sys.path.append(f'src/functions/rspfootball-action-handler')
 
 import rspmodel
-from rspmodel import GainResult, KickoffChoiceAction, LossResult, Play, State
+from rspmodel import GainResult, KickoffChoiceAction, LossResult, Play, RollAction, State
 import rsputil
 import actionhandler
 
@@ -205,6 +205,58 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.ONSIDE_KICK,
             'possession': ACTING_PLAYER
         })
+    
+    def test_onside_kick_success(self):
+        self.action_test_helper(init_game = {
+            'state': State.ONSIDE_KICK,
+            'possession': ACTING_PLAYER,
+            'ballpos': 35
+        }, action = RollAction(
+            count = 2
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'ballpos': 45
+        }, roll=[2,3])
+    
+    def test_onside_kick_failure(self):
+        self.action_test_helper(init_game = {
+            'state': State.ONSIDE_KICK,
+            'possession': ACTING_PLAYER,
+            'ballpos': 35
+        }, action = RollAction(
+            count = 2
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'ballpos': 55
+        }, roll=[3,3])
+
+    def test_onside_kick_from_safety_success(self):
+        self.action_test_helper(init_game = {
+            'state': State.ONSIDE_KICK,
+            'possession': ACTING_PLAYER,
+            'ballpos': 20
+        }, action = RollAction(
+            count = 2
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'ballpos': 30
+        }, roll=[2,3])
+    
+    def test_onside_kick_from_safety_failure(self):
+        self.action_test_helper(init_game = {
+            'state': State.ONSIDE_KICK,
+            'possession': ACTING_PLAYER,
+            'ballpos': 20
+        }, action = RollAction(
+            count = 2
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'ballpos': 70
+        }, roll=[3,3])
 
     def test_kickoff_to_touchback(self):
         self.action_test_helper(init_game = {

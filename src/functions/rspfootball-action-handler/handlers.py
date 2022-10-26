@@ -225,7 +225,7 @@ class OnsideKickActionHandler(RollActionHandler):
     allowed_counts = [2]
 
     def handle_roll_action(self, game, roll):
-        game.ballpos = 45
+        game.ballpos += 10
 
         if sum(roll) > 5:
             switch_possession(game)
