@@ -29,6 +29,11 @@ class State(str, Enum):
     SHORT_PASS_CONT = 'SHORT_PASS_CONT'
     SACK_CHOICE = 'SACK_CHOICE'
     SACK_ROLL = 'SACK_ROLL'
+    PICK_ROLL = 'PICK_ROLL'
+    DISTANCE_ROLL = 'DISTANCE_ROLL'
+    PICK_TOUCHBACK_CHOICE = 'PICK_TOUCHBACK_CHOICE'
+    PICK_RETURN = 'PICK_RETURN'
+    PICK_RETURN_6 = 'PICK_RETURN_6'
     GAME_OVER = 'GAME_OVER'
 
 class Play(str, Enum):
@@ -103,6 +108,11 @@ class SackChoiceAction(BaseModel):
 
 Action = Union[RspAction, RollAction, KickoffElectionAction, KickoffChoiceAction, CallPlayAction, TouchbackChoiceAction, RollAgainChoiceAction, PatChoiceAction, SackChoiceAction]
 
+class TurnoverType(str, Enum):
+    DOWNS = 'DOWNS'
+    PICK = 'PICK'
+    FUMBLE = 'FUMBLE'
+
 class RspResult(BaseModel):
     name: Literal['RSP'] = 'RSP'
     home: RspChoice
@@ -128,7 +138,17 @@ class LossResult(BaseModel):
     player: Player
     yards: int
 
-Result = Union[RspResult, RollResult, SafetyResult, GainResult, LossResult]
+class TurnoverResult(BaseModel):
+    name: Literal['TURNOVER'] = 'TURNOVER'
+    type: TurnoverType
+
+class OutOfBoundsPassResult(BaseModel):
+    name: Literal['OOB_PASS'] = 'OOB_PASS'
+
+class TouchbackResult(BaseModel):
+    name: Literal['TOUCHBACK'] = 'TOUCHBACK'
+
+Result = Union[RspResult, RollResult, SafetyResult, GainResult, LossResult, TurnoverResult, OutOfBoundsPassResult, TouchbackResult]
 
 class Game(BaseModel):
     gameId: str

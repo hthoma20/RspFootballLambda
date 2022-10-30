@@ -529,7 +529,112 @@ class SackChoiceActionHandler(ActionHandler):
         end_play(game)
 
     def handle_pick_choice(self, game, player):
-        pass
+        game.state = State.PICK_ROLL
+        game.actions[player] = ['ROLL']
+
+
+# Update the given Game from the point where the ball is thrown,
+# and will be intercepted
+def complete_interception(game, throw_distance):
+        picking_player = get_opponent(game.possession)
+
+        if game.ballpos + throw_distance >= 110:
+            game.result += [rspmodel.OutOfBoundsPassResult()]
+            end_play(game)
+            return
+        
+        game.ballpos += throw_distance
+        if game.ballpos >= 100:
+            game.state = State.PICK_TOUCHBACK_CHOICE
+            game.actions[picking_player] = ['TOUCHBACK_CHOICE']
+        else:
+            game.state = State.PICK_RETURN
+            game.actions[picking_player] = ['ROLL']
+
+        game.result += [rspmodel.TurnoverResult(type = 'PICK')]
+        switch_possession(game)
+        game.firstDown = None
+
+class PickRollActionHandler(RollActionHandler):
+    states = [State.PICK_ROLL]
+    allowed_counts = [1]
+
+    def handle_roll_action(self, game, roll):
+        [roll] = roll
+        
+        success = self.is_pick_successful(game.play, roll)
+
+        if not success:
+            end_play(game)
+            return
+        
+        if game.play == Play.SHORT_PASS:
+            complete_interception(game, 10)
+        else:
+            game.state = State.DISTANCE_ROLL
+            game.actions[game.possession] = ['ROLL']
+    
+    def is_pick_successful(self, play, roll):
+        if play == Play.SHORT_PASS:
+            return roll == 6
+        
+        raise Exception(f"Unexpected play for PickRoll: {play}")
+        
+class DistanceRollActionHandler(RollActionHandler):
+    states = [State.DISTANCE_ROLL]
+    allowed_counts = [1,3]
+
+    def handle_roll_action(self, game, roll):
+        distance = self.get_throw_distance(game.play, roll)
+        complete_interception(game, distance)
+
+    def get_throw_distance(self, play, roll):
+        # TODO: Update this with actual computed yardage based on play and roll
+        return 10
+
+class PickReturnActionHandler(RollActionHandler):
+    states = [State.PICK_RETURN]
+    allowed_counts = [1]
+
+    def handle_roll_action(self, game, roll):
+        [roll] = roll
+        
+        game.ballpos += 5 * roll
+
+        if roll == 6:
+            game.state = State.PICK_RETURN_6
+            game.actions[game.possession] = ['ROLL']
+        else:
+            set_call_play_state(game)
+            set_first_down(game)
+
+class PickReturn6ActionHandler(RollActionHandler):
+    states = [State.PICK_RETURN_6]
+    allowed_counts = [1]
+
+    def handle_roll_action(self, game, roll):
+        [roll] = roll
+        
+        if roll == 6:
+            game.ballpos = 100
+            process_touch_down(game)
+        else:
+            set_first_down(game)
+            set_call_play_state(game)
+
+class PickTouchbackChoiceActionHandler(ActionHandler):
+    states = [State.PICK_TOUCHBACK_CHOICE]
+    actions = [rspmodel.TouchbackChoiceAction]
+        
+    def handle_action(self, game, player, action):
+        if action.choice == TouchbackChoice.TOUCHBACK:
+            game.result += [rspmodel.TouchbackResult()]
+            game.ballpos = 20
+            set_first_down(game)
+            set_call_play_state(game)
+        else: # choice is RETURN
+            game.state = State.PICK_RETURN
+            game.actions[player] = ['ROLL']
 
 class PatChoiceActionHandler(ActionHandler):
     states = [State.PAT_CHOICE]

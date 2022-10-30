@@ -6,7 +6,7 @@ sys.path.append(f'src/layers/rspfootball-util')
 sys.path.append(f'src/functions/rspfootball-action-handler')
 
 import rspmodel
-from rspmodel import GainResult, KickoffChoiceAction, LossResult, Play, RollAction, State
+from rspmodel import GainResult, KickoffChoiceAction, LossResult, Play, RollAction, State, TouchbackChoice, TouchbackResult, TurnoverResult
 import rsputil
 import actionhandler
 
@@ -1308,6 +1308,175 @@ class ActionHandlerTest(unittest.TestCase):
                 yards = 5
             )])
         })
+
+    def test_short_pass_sack_choice_pick(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_CHOICE,
+            'possession': OPPONENT,
+            'play': Play.SHORT_PASS,
+            'ballpos': 20
+        }, action = rspmodel.SackChoiceAction(
+            choice = 'PICK'
+        ), expected_game = {
+            'state': State.PICK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.SHORT_PASS,
+            'ballpos': 20,
+            'actions': {ACTING_PLAYER: ['ROLL']},
+        })
+    
+    def test_pick_roll_short_pass_success(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.SHORT_PASS,
+            'ballpos': 20,
+            'firstDown': 30
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PICK_RETURN,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_PASS,
+            'ballpos': 70,
+            'firstDown': None,
+            'actions': {ACTING_PLAYER: ['ROLL']},
+            'result': AssertionPredicate.containsAll([TurnoverResult(type = 'PICK')])
+        }, roll = [6])
+    
+    def test_pick_roll_short_pass_failure(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.SHORT_PASS,
+            'ballpos': 20,
+            'down': 1,
+            'firstDown': 30
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'ballpos': 20,
+            'down': 2,
+            'firstDown': 30,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']}
+        }, roll = [5])
+
+    def test_pick_roll_short_pass_touchback(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.SHORT_PASS,
+            'ballpos': 95
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PICK_TOUCHBACK_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.SHORT_PASS,
+            'ballpos': -5,
+            'actions': {ACTING_PLAYER: ['TOUCHBACK_CHOICE']},
+            'result': AssertionPredicate.containsAll([TurnoverResult(type = 'PICK')])
+        }, roll = [6])
+    
+    def test_pick_touchback_choice_touchback(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_TOUCHBACK_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': -5
+        }, action = rspmodel.TouchbackChoiceAction(
+            choice = TouchbackChoice.TOUCHBACK
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 20,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([TouchbackResult()])
+        })
+    
+    def test_pick_touchback_choice_return(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_TOUCHBACK_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': -5
+        }, action = rspmodel.TouchbackChoiceAction(
+            choice = TouchbackChoice.RETURN
+        ), expected_game = {
+            'state': State.PICK_RETURN,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': -5,
+            'actions': {ACTING_PLAYER: ['ROLL']},
+        })
+    
+    def test_pick_return(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_RETURN,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 10
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 20,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+        }, roll = [2])
+
+    def test_pick_return_6(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_RETURN,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 10
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PICK_RETURN_6,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 40,
+            'actions': {ACTING_PLAYER: ['ROLL']},
+        }, roll = [6])
+
+    def test_pick_return_6_regular(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_RETURN_6,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 40
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 40,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+        }, roll = [1])
+    
+    def test_pick_return_6_touchdown(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_RETURN_6,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 40
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PAT_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 100,
+            'actions': {ACTING_PLAYER: ['PAT_CHOICE']},
+        }, roll = [6])
 
     def test_touchdown_last_play(self):
         self.action_test_helper(init_game = {
