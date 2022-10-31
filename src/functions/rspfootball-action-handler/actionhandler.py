@@ -77,6 +77,9 @@ ACTION_HANDLERS = [
     handlers.ShortPassActionHandler(),
     handlers.LongPassActionHandler(),
     handlers.LongPassRollActionHandler(),
+    handlers.BombActionHandler(),
+    handlers.BombRollActionHandler(),
+    handlers.BombChoiceActionHandler(),
     handlers.SackActionHandler(),
     handlers.SackChoiceActionHandler(),
     handlers.PickRollActionHandler(),
@@ -97,8 +100,8 @@ def process_action(game, player, action):
         if (game.state in handler.states) and (type(action) in handler.actions):
             logging.debug(f'init game: {game}')
             logging.info(f'selected handler: {type(handler).__name__}')
-            logging.debug(f'handled game: {game}')
             handler.handle_action(game, player, action)
+            logging.debug(f'handled game: {game}')
             return
     
     raise Exception(f"No handler found for action {type(action)} in state {game.state}")

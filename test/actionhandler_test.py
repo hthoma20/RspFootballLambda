@@ -1,5 +1,3 @@
-from cmath import exp
-from lib2to3.pgen2.token import OP
 import unittest
 import sys
 
@@ -1549,6 +1547,24 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {OPPONENT: ['ROLL']},
         }, roll = [5])
     
+    def test_pick_roll_long_pass_failure(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.LONG_PASS,
+            'ballpos': 20,
+            'firstDown': 30
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'ballpos': 20,
+            'firstDown': 30,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']},
+        }, roll = [4])
+    
     def test_distance_roll_long_pass(self):
         self.action_test_helper(init_game = {
             'state': State.DISTANCE_ROLL,
@@ -1608,6 +1624,430 @@ class ActionHandlerTest(unittest.TestCase):
             'result': AssertionPredicate.containsAll([OutOfBoundsPassResult()])
         }, roll = [2])
     
+    def test_bomb_loss(self):
+        self.action_test_helper(init_game = {
+            'state': State.BOMB,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'SCISSORS'
+        ), expected_game = {
+            'state': State.SACK_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'actions': {OPPONENT: ['SACK_CHOICE']},
+        })
+    
+    def test_bomb_tie(self):
+        self.action_test_helper(init_game = {
+            'state': State.BOMB,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'down': 1,
+            'ballpos': 10,
+            'firstDown': 20,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'down': 2,
+            'ballpos': 10,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']}
+        })
+    
+    def test_bomb_first_roll_odd(self):
+        self.action_test_helper(init_game = {
+            'state': State.BOMB_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'roll': [],
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.BOMB_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'roll': [1],
+            'actions': {ACTING_PLAYER: ['ROLL_AGAIN_CHOICE']},
+        }, roll = [1])
+    
+    def test_bomb_first_roll_even(self):
+        self.action_test_helper(init_game = {
+            'state': State.BOMB_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'roll': [],
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.BOMB_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'roll': [2],
+            'actions': {ACTING_PLAYER: ['ROLL']},
+        }, roll = [2])
+    
+    def test_bomb_choice_roll_again(self):
+        self.action_test_helper(init_game = {
+            'state': State.BOMB_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'roll': [1],
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAgainChoiceAction(
+            choice = 'ROLL'
+        ), expected_game = {
+            'state': State.BOMB_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'roll': [1,2],
+            'actions': {ACTING_PLAYER: ['ROLL_AGAIN_CHOICE']},
+        }, roll = [2])
+    
+    def test_bomb_choice_hold_under_35(self):
+        self.action_test_helper(init_game = {
+            'state': State.BOMB_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'firstDown': 20,
+            'down': 1,
+            'roll': [1],
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAgainChoiceAction(
+            choice = 'HOLD'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 45,
+            'firstDown': 55,
+            'down': 1,
+            'roll': [1],
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([GainResult(
+                play = Play.BOMB,
+                player = ACTING_PLAYER,
+                yards = 35
+            )])
+        })
+    
+    def test_bomb_choice_hold_over_35(self):
+        self.action_test_helper(init_game = {
+            'state': State.BOMB_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'firstDown': 20,
+            'down': 1,
+            'roll': [5, 4],
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAgainChoiceAction(
+            choice = 'HOLD'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 55,
+            'firstDown': 65,
+            'down': 1,
+            'roll': [5, 4],
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([GainResult(
+                play = Play.BOMB,
+                player = ACTING_PLAYER,
+                yards = 45
+            )])
+        })
+    
+    def test_bomb_third_roll_even(self):
+        self.action_test_helper(init_game = {
+            'state': State.BOMB_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'firstDown': 20,
+            'down': 1,
+            'roll': [5, 4],
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAgainChoiceAction(
+            choice = 'ROLL'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 10,
+            'firstDown': 20,
+            'down': 2,
+            'roll': [5, 4, 1],
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
+        }, roll = [1])
+    
+    def test_bomb_third_roll_under_35(self):
+        self.action_test_helper(init_game = {
+            'state': State.BOMB_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'firstDown': 20,
+            'down': 1,
+            'roll': [1, 1],
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 45,
+            'firstDown': 55,
+            'down': 1,
+            'roll': [1, 1, 1],
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([GainResult(
+                play = Play.BOMB,
+                player = ACTING_PLAYER,
+                yards = 35
+            )])
+        }, roll = [1])
+    
+    def test_bomb_third_roll_over_35(self):
+        self.action_test_helper(init_game = {
+            'state': State.BOMB_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 10,
+            'firstDown': 20,
+            'down': 1,
+            'roll': [4, 5],
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAgainChoiceAction(
+            choice = 'ROLL'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 75,
+            'firstDown': 85,
+            'down': 1,
+            'roll': [4, 5, 4],
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([GainResult(
+                play = Play.BOMB,
+                player = ACTING_PLAYER,
+                yards = 65
+            )])
+        }, roll = [4])
+    
+    def test_bomb_third_roll_oob(self):
+        self.action_test_helper(init_game = {
+            'state': State.BOMB_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 60,
+            'firstDown': 70,
+            'down': 1,
+            'roll': [4, 5],
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RollAgainChoiceAction(
+            choice = 'ROLL'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 60,
+            'firstDown': 70,
+            'down': 2,
+            'roll': [4, 5, 4],
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([OutOfBoundsPassResult()])
+        }, roll = [4])
+    
+    def test_bomb_sack_choice_sack(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_CHOICE,
+            'possession': OPPONENT,
+            'play': Play.BOMB,
+            'ballpos': 20,
+            'down': 1,
+            'firstDown': 30
+        }, action = rspmodel.SackChoiceAction(
+            choice = 'SACK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'ballpos': 5,
+            'down': 2,
+            'firstDown': 30,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([LossResult(
+                player = OPPONENT,
+                play = Play.BOMB,
+                yards = 15
+            )])
+        })
+
+    def test_bomb_sack_choice_pick(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_CHOICE,
+            'possession': OPPONENT,
+            'play': Play.BOMB,
+            'ballpos': 20
+        }, action = rspmodel.SackChoiceAction(
+            choice = 'PICK'
+        ), expected_game = {
+            'state': State.PICK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.BOMB,
+            'ballpos': 20,
+            'actions': {ACTING_PLAYER: ['ROLL']},
+        })
+    
+    def test_pick_roll_bomb_success(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.BOMB,
+            'ballpos': 20,
+            'firstDown': 30
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.DISTANCE_ROLL,
+            'possession': OPPONENT,
+            'play': Play.BOMB,
+            'ballpos': 20,
+            'firstDown': 30,
+            'actions': {OPPONENT: ['ROLL']},
+        }, roll = [2])
+    
+    def test_pick_roll_bomb_failure(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.BOMB,
+            'ballpos': 20,
+            'firstDown': 30
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'ballpos': 20,
+            'firstDown': 30,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']},
+        }, roll = [5])
+    
+    def test_distance_roll_bomb(self):
+        self.action_test_helper(init_game = {
+            'state': State.DISTANCE_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 20,
+            'firstDown': 30
+        }, action = rspmodel.RollAction(
+            count = 3
+        ), expected_game = {
+            'state': State.PICK_RETURN,
+            'possession': OPPONENT,
+            'play': Play.BOMB,
+            'ballpos': 30,
+            'firstDown': None,
+            'actions': {OPPONENT: ['ROLL']},
+            'result': AssertionPredicate.containsAll([TurnoverResult(type = 'PICK')])
+        }, roll = [3, 3, 4])
+    
+    def test_distance_roll_bomb_touchback(self):
+        self.action_test_helper(init_game = {
+            'state': State.DISTANCE_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 80,
+            'firstDown': 90
+        }, action = rspmodel.RollAction(
+            count = 3
+        ), expected_game = {
+            'state': State.PICK_TOUCHBACK_CHOICE,
+            'possession': OPPONENT,
+            'play': Play.BOMB,
+            'ballpos': -5,
+            'firstDown': None,
+            'actions': {OPPONENT: ['TOUCHBACK_CHOICE']},
+            'result': AssertionPredicate.containsAll([TurnoverResult(type = 'PICK')])
+        }, roll = [1, 1, 3])
+    
+    def test_distance_roll_bomb_oob(self):
+        self.action_test_helper(init_game = {
+            'state': State.DISTANCE_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.BOMB,
+            'ballpos': 45,
+            'firstDown': 55,
+            'down': 1
+        }, action = rspmodel.RollAction(
+            count = 3
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 45,
+            'firstDown': 55,
+            'down': 2,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([OutOfBoundsPassResult()])
+        }, roll = [4,5,6])
+
     def test_pick_touchback_choice_return(self):
         self.action_test_helper(init_game = {
             'state': State.PICK_TOUCHBACK_CHOICE,

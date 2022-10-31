@@ -2,7 +2,7 @@ import logging
 import random
 
 import rspmodel
-from rspmodel import Action, GainResult, KickoffChoice, KickoffElectionChoice, OutOfBoundsPassResult, PatChoice, Play, RollAgainChoice, RspChoice, SackChoice, State, TouchbackChoice
+from rspmodel import Action, GainResult, KickoffChoice, KickoffElectionChoice, OutOfBoundsPassResult, PatChoice, Play, RollAction, RollAgainChoice, RspChoice, SackChoice, State, TouchbackChoice
 from rsputil import get_opponent
 
 class IllegalActionException(Exception):
@@ -185,6 +185,7 @@ class RollActionHandler(ActionHandler):
             raise IllegalActionException(f'Must roll {self.allowed_counts} dice in state {game.state}')
         
         roll = roll_dice(action.count)
+        game.roll = roll
         game.result += [rspmodel.RollResult(roll=roll, player=player)]
         self.handle_roll_action(game, roll)
 
@@ -352,6 +353,8 @@ class PlayCallActionHandler(ActionHandler):
             game.state = State.SHORT_PASS
         elif action.play == Play.LONG_PASS:
             game.state = State.LONG_PASS
+        elif action.play == Play.BOMB:
+            game.state = State.BOMB
         else:
             raise IllegalActionException("Unexpected play")
         
@@ -484,6 +487,81 @@ class LongPassRollActionHandler(RollActionHandler):
 
         end_play(game)
 
+class BombActionHandler(RspActionHandler):
+    states = [State.BOMB]
+
+    def handle_rsp_action(self, game, winner):
+        opponent = get_opponent(game.possession)
+
+        if winner == game.possession:
+            game.state = State.BOMB_ROLL
+            game.actions[game.possession] = ['ROLL']
+            game.roll = []
+        elif winner == opponent:
+            game.state = State.SACK_CHOICE
+            game.actions[opponent] = ['SACK_CHOICE']
+        else:
+            end_play(game)
+
+def end_bomb(game):
+    roll = sum(game.roll)
+    
+    if roll % 2 == 0:
+        end_play(game)
+        return
+    
+    distance = max(35, 5*roll)
+
+    if game.ballpos + distance >= 110:
+        game.result += [OutOfBoundsPassResult()]
+    else:    
+        game.ballpos += distance
+        game.result += [GainResult(
+            play = Play.BOMB,
+            player = game.possession,
+            yards = distance
+        )]
+
+    end_play(game)
+
+def process_bomb_roll(game):
+    roll = roll_dice(1)
+    game.roll += roll
+    game.result += [rspmodel.RollResult(
+        player = game.possession,
+        roll = roll
+    )]
+
+    if len(game.roll) == 3:
+        end_bomb(game)
+    elif sum(game.roll) % 2 == 0:
+        game.state = State.BOMB_ROLL
+        game.actions[game.possession] = ['ROLL']
+    else:
+        game.state = State.BOMB_CHOICE
+        game.actions[game.possession] = ['ROLL_AGAIN_CHOICE']
+
+
+class BombRollActionHandler(ActionHandler):
+    states = [State.BOMB_ROLL]
+    actions = [rspmodel.RollAction]
+
+    def handle_action(self, game, player, action):
+        if action.count != 1:
+            raise IllegalActionException("Bomb roll must have count=1")
+
+        process_bomb_roll(game)
+
+class BombChoiceActionHandler(ActionHandler):
+    states = [State.BOMB_CHOICE]
+    actions = [rspmodel.RollAgainChoiceAction]
+
+    def handle_action(self, game, player, action):
+        if action.choice == RollAgainChoice.ROLL:
+            process_bomb_roll(game)
+        else: # choice is HOLD
+            end_bomb(game)
+
 class SackActionHandler(RollActionHandler):
     states = [State.SACK_ROLL]
     allowed_counts = [1]
@@ -550,6 +628,8 @@ class SackChoiceActionHandler(ActionHandler):
             return 5
         if play == Play.LONG_PASS:
             return 10
+        if play == Play.BOMB:
+            return 15
         
         raise Exception(f'Unexpected play for SackChoice: {play}')
 
@@ -616,6 +696,8 @@ class PickRollActionHandler(RollActionHandler):
             return roll == 6
         if play == Play.LONG_PASS:
             return roll >= 5
+        if play == Play.BOMB:
+            return roll % 2 == 0
         
         raise Exception(f"Unexpected play for PickRoll: {play}")
         
@@ -632,6 +714,11 @@ class DistanceRollActionHandler(RollActionHandler):
             if (len(roll) != 1):
                 raise IllegalActionException("DistanceRoll for a ShortPass must be 1 die")
             return 10 + 5*sum(roll)
+        
+        if play == Play.BOMB:
+            if (len(roll) != 3):
+                raise IllegalActionException("DistanceRoll for a Bomb must be 3 dice")
+            return 5*sum(roll)
         
         raise Exception(f"Unexpected play for DistanceRoll: {play}")
 
