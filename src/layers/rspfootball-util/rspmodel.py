@@ -27,6 +27,8 @@ class State(str, Enum):
     LONG_RUN_ROLL = 'LONG_RUN_ROLL'
     SHORT_PASS = 'SHORT_PASS'
     SHORT_PASS_CONT = 'SHORT_PASS_CONT'
+    LONG_PASS = 'LONG_PASS'
+    LONG_PASS_ROLL = 'LONG_PASS_ROLL'
     SACK_CHOICE = 'SACK_CHOICE'
     SACK_ROLL = 'SACK_ROLL'
     PICK_ROLL = 'PICK_ROLL'
@@ -40,6 +42,7 @@ class Play(str, Enum):
     SHORT_RUN = 'SHORT_RUN'
     LONG_RUN = 'LONG_RUN'
     SHORT_PASS = 'SHORT_PASS'
+    LONG_PASS = 'LONG_PASS'
 
 class RspChoice(str, Enum):
     ROCK = 'ROCK'

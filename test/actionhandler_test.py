@@ -1,3 +1,4 @@
+from cmath import exp
 from lib2to3.pgen2.token import OP
 import unittest
 import sys
@@ -6,7 +7,7 @@ sys.path.append(f'src/layers/rspfootball-util')
 sys.path.append(f'src/functions/rspfootball-action-handler')
 
 import rspmodel
-from rspmodel import GainResult, KickoffChoiceAction, LossResult, Play, RollAction, State, TouchbackChoice, TouchbackResult, TurnoverResult
+from rspmodel import GainResult, KickoffChoiceAction, LossResult, OutOfBoundsPassResult, Play, RollAction, State, TouchbackChoice, TouchbackResult, TurnoverResult
 import rsputil
 import actionhandler
 
@@ -1381,22 +1382,231 @@ class ActionHandlerTest(unittest.TestCase):
             'result': AssertionPredicate.containsAll([TurnoverResult(type = 'PICK')])
         }, roll = [6])
     
-    def test_pick_touchback_choice_touchback(self):
+    def test_long_pass_win(self):
         self.action_test_helper(init_game = {
-            'state': State.PICK_TOUCHBACK_CHOICE,
+            'state': State.LONG_PASS,
             'possession': ACTING_PLAYER,
-            'play': None,
-            'ballpos': -5
-        }, action = rspmodel.TouchbackChoiceAction(
-            choice = TouchbackChoice.TOUCHBACK
+            'play': Play.LONG_PASS,
+            'ballpos': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'PAPER'
+        ), expected_game = {
+            'state': State.LONG_PASS_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_PASS,
+            'ballpos': 10,
+            'actions': {ACTING_PLAYER: ['ROLL']},
+        })
+    
+    def test_long_pass_loss(self):
+        self.action_test_helper(init_game = {
+            'state': State.LONG_PASS,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_PASS,
+            'ballpos': 10,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'SCISSORS'
+        ), expected_game = {
+            'state': State.SACK_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_PASS,
+            'ballpos': 10,
+            'actions': {OPPONENT: ['SACK_CHOICE']},
+        })
+    
+    def test_long_pass_tie(self):
+        self.action_test_helper(init_game = {
+            'state': State.LONG_PASS,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_PASS,
+            'down': 1,
+            'ballpos': 10,
+            'firstDown': 20,
+            'rsp': {
+                ACTING_PLAYER: None,
+                OPPONENT: 'ROCK'
+            }
+        }, action = rspmodel.RspAction(
+            name = 'RSP',
+            choice = 'ROCK'
         ), expected_game = {
             'state': State.PLAY_CALL,
             'possession': ACTING_PLAYER,
             'play': None,
-            'ballpos': 20,
-            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
-            'result': AssertionPredicate.containsAll([TouchbackResult()])
+            'down': 2,
+            'ballpos': 10,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']}
         })
+    
+    def test_long_pass_roll(self):
+        self.action_test_helper(init_game = {
+            'state': State.LONG_PASS_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_PASS,
+            'ballpos': 10,
+            'firstDown': 20,
+            'down': 1
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'ballpos': 30,
+            'firstDown': 40,
+            'down': 1,
+            'result': AssertionPredicate.containsAll([GainResult(
+                play = Play.LONG_PASS,
+                player = ACTING_PLAYER,
+                yards = 20
+            )])
+        }, roll = [2])
+    
+    def test_long_pass_roll_oob(self):
+        self.action_test_helper(init_game = {
+            'state': State.LONG_PASS_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_PASS,
+            'ballpos': 95,
+            'firstDown': 100,
+            'down': 1
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'ballpos': 95,
+            'firstDown': 100,
+            'down': 2,
+            'result': AssertionPredicate.containsAll([OutOfBoundsPassResult()])
+        }, roll = [2])
+    
+    def test_long_pass_sack_choice_sack(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_CHOICE,
+            'possession': OPPONENT,
+            'play': Play.LONG_PASS,
+            'ballpos': 20,
+            'down': 1,
+            'firstDown': 30
+        }, action = rspmodel.SackChoiceAction(
+            choice = 'SACK'
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'play': None,
+            'ballpos': 10,
+            'down': 2,
+            'firstDown': 30,
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([LossResult(
+                player = OPPONENT,
+                play = Play.LONG_PASS,
+                yards = 10
+            )])
+        })
+
+    def test_long_pass_sack_choice_pick(self):
+        self.action_test_helper(init_game = {
+            'state': State.SACK_CHOICE,
+            'possession': OPPONENT,
+            'play': Play.LONG_PASS,
+            'ballpos': 20
+        }, action = rspmodel.SackChoiceAction(
+            choice = 'PICK'
+        ), expected_game = {
+            'state': State.PICK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.LONG_PASS,
+            'ballpos': 20,
+            'actions': {ACTING_PLAYER: ['ROLL']},
+        })
+    
+    def test_pick_roll_long_pass_success(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_ROLL,
+            'possession': OPPONENT,
+            'play': Play.LONG_PASS,
+            'ballpos': 20,
+            'firstDown': 30
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.DISTANCE_ROLL,
+            'possession': OPPONENT,
+            'play': Play.LONG_PASS,
+            'ballpos': 20,
+            'firstDown': 30,
+            'actions': {OPPONENT: ['ROLL']},
+        }, roll = [5])
+    
+    def test_distance_roll_long_pass(self):
+        self.action_test_helper(init_game = {
+            'state': State.DISTANCE_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_PASS,
+            'ballpos': 20,
+            'firstDown': 30
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PICK_RETURN,
+            'possession': OPPONENT,
+            'play': Play.LONG_PASS,
+            'ballpos': 55,
+            'firstDown': None,
+            'actions': {OPPONENT: ['ROLL']},
+            'result': AssertionPredicate.containsAll([TurnoverResult(type = 'PICK')])
+        }, roll = [3])
+    
+    def test_distance_roll_long_pass_touchback(self):
+        self.action_test_helper(init_game = {
+            'state': State.DISTANCE_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_PASS,
+            'ballpos': 90,
+            'firstDown': 100
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PICK_TOUCHBACK_CHOICE,
+            'possession': OPPONENT,
+            'play': Play.LONG_PASS,
+            'ballpos': -5,
+            'firstDown': None,
+            'actions': {OPPONENT: ['TOUCHBACK_CHOICE']},
+            'result': AssertionPredicate.containsAll([TurnoverResult(type = 'PICK')])
+        }, roll = [1])
+    
+    def test_distance_roll_long_pass_oob(self):
+        self.action_test_helper(init_game = {
+            'state': State.DISTANCE_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_PASS,
+            'ballpos': 90,
+            'firstDown': 100,
+            'down': 1
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 90,
+            'firstDown': 100,
+            'down': 2,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([OutOfBoundsPassResult()])
+        }, roll = [2])
     
     def test_pick_touchback_choice_return(self):
         self.action_test_helper(init_game = {

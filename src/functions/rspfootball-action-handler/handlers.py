@@ -2,7 +2,7 @@ import logging
 import random
 
 import rspmodel
-from rspmodel import Action, KickoffChoice, KickoffElectionChoice, PatChoice, Play, RollAgainChoice, RspChoice, SackChoice, State, TouchbackChoice
+from rspmodel import Action, GainResult, KickoffChoice, KickoffElectionChoice, OutOfBoundsPassResult, PatChoice, Play, RollAgainChoice, RspChoice, SackChoice, State, TouchbackChoice
 from rsputil import get_opponent
 
 class IllegalActionException(Exception):
@@ -350,6 +350,8 @@ class PlayCallActionHandler(ActionHandler):
             game.state = State.LONG_RUN
         elif action.play == Play.SHORT_PASS:
             game.state = State.SHORT_PASS
+        elif action.play == Play.LONG_PASS:
+            game.state = State.LONG_PASS
         else:
             raise IllegalActionException("Unexpected play")
         
@@ -449,6 +451,39 @@ class ShortPassActionHandler(RspActionHandler):
         else:
             end_play(game)
 
+class LongPassActionHandler(RspActionHandler):
+    states = [State.LONG_PASS]
+
+    def handle_rsp_action(self, game, winner):
+        if winner == game.possession:
+            game.state = State.LONG_PASS_ROLL
+            game.actions[game.possession] = ['ROLL']
+        elif winner == get_opponent(game.possession):
+            game.state = State.SACK_CHOICE
+            game.actions[get_opponent(game.possession)] = ['SACK_CHOICE']
+        else:
+            end_play(game)
+
+class LongPassRollActionHandler(RollActionHandler):
+    states = [State.LONG_PASS_ROLL]
+    allowed_counts = [1]
+
+    def handle_roll_action(self, game, roll):
+        [roll] = roll
+        distance = 10 + roll*5
+        
+        if game.ballpos + distance >= 110:
+            game.result += [OutOfBoundsPassResult()]
+        else:
+            game.ballpos += distance
+            game.result += [GainResult(
+                play = Play.LONG_PASS,
+                player = game.possession,
+                yards = distance
+            )]
+
+        end_play(game)
+
 class SackActionHandler(RollActionHandler):
     states = [State.SACK_ROLL]
     allowed_counts = [1]
@@ -513,6 +548,8 @@ class SackChoiceActionHandler(ActionHandler):
     def get_sack_yards(self, play):
         if play == Play.SHORT_PASS:
             return 5
+        if play == Play.LONG_PASS:
+            return 10
         
         raise Exception(f'Unexpected play for SackChoice: {play}')
 
@@ -577,6 +614,8 @@ class PickRollActionHandler(RollActionHandler):
     def is_pick_successful(self, play, roll):
         if play == Play.SHORT_PASS:
             return roll == 6
+        if play == Play.LONG_PASS:
+            return roll >= 5
         
         raise Exception(f"Unexpected play for PickRoll: {play}")
         
@@ -589,8 +628,12 @@ class DistanceRollActionHandler(RollActionHandler):
         complete_interception(game, distance)
 
     def get_throw_distance(self, play, roll):
-        # TODO: Update this with actual computed yardage based on play and roll
-        return 10
+        if play == Play.LONG_PASS:
+            if (len(roll) != 1):
+                raise IllegalActionException("DistanceRoll for a ShortPass must be 1 die")
+            return 10 + 5*sum(roll)
+        
+        raise Exception(f"Unexpected play for DistanceRoll: {play}")
 
 class PickReturnActionHandler(RollActionHandler):
     states = [State.PICK_RETURN]
