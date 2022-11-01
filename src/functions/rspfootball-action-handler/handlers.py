@@ -2,7 +2,7 @@ import logging
 import random
 
 import rspmodel
-from rspmodel import Action, GainResult, KickoffChoice, KickoffElectionChoice, OutOfBoundsPassResult, PatChoice, Play, RollAction, RollAgainChoice, RspChoice, SackChoice, State, TouchbackChoice
+from rspmodel import Action, GainResult, IncompletePassResult, KickoffChoice, KickoffElectionChoice, KickoffElectionResult, OutOfBoundsKickResult, OutOfBoundsPassResult, PatChoice, Play, RollAction, RollAgainChoice, RspChoice, SackChoice, ScoreResult, State, TouchbackChoice, TurnoverResult, TurnoverType
 from rsputil import get_opponent
 
 class IllegalActionException(Exception):
@@ -28,10 +28,15 @@ def touchdown(game):
     game.score[game.possession] += 6
     game.state = State.PAT_CHOICE
     game.actions[game.possession] = ['PAT_CHOICE']
+    game.result += [ScoreResult(type = 'TOUCHDOWN')]
+
 
 def safety(game):
     game.score[get_opponent(game.possession)] += 2
-    game.result += [rspmodel.SafetyResult()]
+    game.result += [rspmodel.ScoreResult(type = 'SAFETY')]
+
+    if game.ballpos <= -10:
+        game.ballpos = -5
 
     if game.playCount > GAME_LENGTH:
         set_game_over_state(game)    
@@ -62,6 +67,7 @@ def end_play(game):
     elif game.down > 4:
         switch_possession(game)
         set_first_down(game)
+        game.result += [TurnoverResult(type = TurnoverType.DOWNS)]
     
     set_call_play_state(game)
 
@@ -81,11 +87,6 @@ def switch_possession(game):
     game.possession = get_opponent(game.possession)
     game.ballpos = 100 - game.ballpos
 
-def process_touch_down(game):
-    game.score[game.possession] += 6
-
-    game.state = State.PAT_CHOICE
-    game.actions[game.possession] = ['PAT_CHOICE']
 
 def roll_dice(count):
     return [random.randint(1, 6) for _ in range(count)]
@@ -204,6 +205,7 @@ class KickoffActionHandler(RollActionHandler):
         switch_possession(game)
 
         if sum(roll) <= 8:
+            game.result += [OutOfBoundsKickResult()]
             game.ballpos = 40
             set_first_down(game)
             set_call_play_state(game)
@@ -261,7 +263,7 @@ class KickReturn6ActionHandler(RollActionHandler):
         [roll] = roll
         
         if roll == 6:
-            process_touch_down(game)
+            touchdown(game)
         else:
             game.ballpos += 5 * roll
             set_first_down(game)
@@ -308,6 +310,7 @@ class KickoffElectionActionHandler(ActionHandler):
         
         game.firstKick = kicker
         game.possession = kicker
+        game.result += [KickoffElectionResult(choice = action.choice)]
 
         set_kickoff_state(game, 35)
 
@@ -375,6 +378,11 @@ class ShortRunActionHandler(RspActionHandler):
         
         if winner == game.possession:
             game.ballpos += 5
+            game.result += [GainResult(
+                play = Play.SHORT_RUN,
+                player = game.possession,
+                yards = 5
+            )]
             
             if game.ballpos >= 100:
                 end_play(game)
@@ -410,7 +418,13 @@ class LongRunRollActionHandler(RollActionHandler):
 
     def handle_roll_action(self, game, roll):
         [roll] = roll
-        game.ballpos += roll*5
+        distance = roll*5
+        game.ballpos += distance
+        game.result += [GainResult(
+                play = Play.SHORT_RUN,
+                player = game.possession,
+                yards = distance
+            )]
 
         if roll == 1:
             game.state = State.FUMBLE
@@ -452,6 +466,7 @@ class ShortPassActionHandler(RspActionHandler):
             game.actions[opponent] = ['SACK_CHOICE']
 
         else:
+            game.result += [rspmodel.IncompletePassResult()]
             end_play(game)
 
 class LongPassActionHandler(RspActionHandler):
@@ -465,6 +480,7 @@ class LongPassActionHandler(RspActionHandler):
             game.state = State.SACK_CHOICE
             game.actions[get_opponent(game.possession)] = ['SACK_CHOICE']
         else:
+            game.result += [rspmodel.IncompletePassResult()]
             end_play(game)
 
 class LongPassRollActionHandler(RollActionHandler):
@@ -501,12 +517,14 @@ class BombActionHandler(RspActionHandler):
             game.state = State.SACK_CHOICE
             game.actions[opponent] = ['SACK_CHOICE']
         else:
+            game.result += [rspmodel.IncompletePassResult()]
             end_play(game)
 
 def end_bomb(game):
     roll = sum(game.roll)
     
     if roll % 2 == 0:
+        game.result += [rspmodel.IncompletePassResult()]
         end_play(game)
         return
     
@@ -570,16 +588,24 @@ class SackActionHandler(RollActionHandler):
 
         [roll] = roll
 
-        if game.play == Play.SHORT_RUN:
-            if roll >= 5:
-                game.ballpos -= 5
-        elif game.play == Play.LONG_RUN:
-            sack_distance = 10 if roll == 6 else 5
-            game.ballpos -= sack_distance
-        else:
-            raise Exception(f'Unexpected play [{game.play}] for sack roll')
+        distance = self.get_sack_distance(game.play, roll)
+
+        game.ballpos -= distance
+        game.result += [rspmodel.LossResult(
+            play = game.play,
+            player = game.possession,
+            yards = distance
+        )]
         
         end_play(game)
+
+    def get_sack_distance(self, play, roll):
+        if play == Play.SHORT_RUN:
+            return 5 if roll >= 5 else 0
+        if play == Play.LONG_RUN:
+            return 10 if roll == 6 else 5
+        
+        raise Exception(f'Unexpected play [{play}] for sack roll')
 
 class FumbleActionHandler(RspActionHandler):
     states = [State.FUMBLE]
@@ -598,6 +624,7 @@ class FumbleActionHandler(RspActionHandler):
                 return
 
             switch_possession(game)
+            game.result += [TurnoverResult(type = TurnoverType.FUMBLE)]
 
             # this means we are about to end the play, and it should be first down for the
             # recovering player
@@ -610,7 +637,7 @@ class FumbleActionHandler(RspActionHandler):
         # if this is a punt return or long run
         if game.play:
             end_play(game)
-        else:
+        else: # if this is a kick return
             set_call_play_state(game)
 
 class SackChoiceActionHandler(ActionHandler):
@@ -668,7 +695,7 @@ def complete_interception(game, throw_distance):
             game.state = State.PICK_RETURN
             game.actions[picking_player] = ['ROLL']
 
-        game.result += [rspmodel.TurnoverResult(type = 'PICK')]
+        game.result += [rspmodel.TurnoverResult(type = TurnoverType.PICK)]
         switch_possession(game)
         game.firstDown = None
 
@@ -683,6 +710,7 @@ class PickRollActionHandler(RollActionHandler):
 
         if not success:
             end_play(game)
+            game.result += [IncompletePassResult()]
             return
         
         if game.play == Play.SHORT_PASS:
@@ -747,7 +775,7 @@ class PickReturn6ActionHandler(RollActionHandler):
         
         if roll == 6:
             game.ballpos = 100
-            process_touch_down(game)
+            touchdown(game)
         else:
             set_first_down(game)
             set_call_play_state(game)
@@ -796,6 +824,7 @@ class ExtraPointKickActionHandler(RollActionHandler):
         
         if sum(roll) >= 4:
             game.score[game.possession] += 1
+            game.result += [ScoreResult(type = 'PAT_1')]
         
         end_pat(game)
 
@@ -805,5 +834,6 @@ class TwoPointConversionActionHandler(RspActionHandler):
     def handle_rsp_action(self, game, winner):
         if winner == game.possession:
             game.score[game.possession] += 2
+            game.result += [ScoreResult(type = 'PAT_2')]
         
         end_pat(game)

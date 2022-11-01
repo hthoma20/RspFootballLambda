@@ -5,7 +5,7 @@ sys.path.append(f'src/layers/rspfootball-util')
 sys.path.append(f'src/functions/rspfootball-action-handler')
 
 import rspmodel
-from rspmodel import GainResult, KickoffChoiceAction, LossResult, OutOfBoundsPassResult, Play, RollAction, State, TouchbackChoice, TouchbackResult, TurnoverResult
+from rspmodel import GainResult, IncompletePassResult, KickoffChoiceAction, LossResult, OutOfBoundsPassResult, Play, RollAction, ScoreResult, State, TouchbackChoice, TouchbackResult, TurnoverResult
 import rsputil
 import actionhandler
 
@@ -178,7 +178,9 @@ class ActionHandlerTest(unittest.TestCase):
             choice = 'RECIEVE'
         ), expected_game = {
             'state': State.KICKOFF_CHOICE,
-            'possession': OPPONENT
+            'possession': OPPONENT,
+            'result': AssertionPredicate.containsAll([
+                rspmodel.KickoffElectionResult(choice = 'RECIEVE')])
         })
 
     def test_kickoff_choice_regular(self):
@@ -297,7 +299,8 @@ class ActionHandlerTest(unittest.TestCase):
             'ballpos': 40,
             'firstDown': 50,
             'play': None,
-            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([rspmodel.OutOfBoundsKickResult()])
         }, roll=[2,2,4])
 
     def test_touchback_return(self):
@@ -502,7 +505,8 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']},
             'possession': OPPONENT,
             'ballpos': 60,
-            'playCount': 10
+            'playCount': 10,
+            'result': AssertionPredicate.containsAll([rspmodel.TurnoverResult(type = 'FUMBLE')])
         })
 
     
@@ -538,7 +542,12 @@ class ActionHandlerTest(unittest.TestCase):
             'possession': ACTING_PLAYER,
             'play': Play.SHORT_RUN,
             'ballpos': 15,
-            'actions': {'home': ['RSP'], 'away': ['RSP']}
+            'actions': {'home': ['RSP'], 'away': ['RSP']},
+            'result': AssertionPredicate.containsAll([rspmodel.GainResult(
+                play = Play.SHORT_RUN,
+                player = ACTING_PLAYER,
+                yards = 5
+            )])
         })
     
     def test_short_run_loss(self):
@@ -626,7 +635,8 @@ class ActionHandlerTest(unittest.TestCase):
             'possession': OPPONENT,
             'down': 1,
             'ballpos': 80,
-            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([rspmodel.TurnoverResult(type = 'DOWNS')])
         })
     
     def test_short_run_first_down(self):
@@ -692,7 +702,12 @@ class ActionHandlerTest(unittest.TestCase):
             'play': Play.SHORT_RUN,
             'ballpos': 15,
             'down': 1,
-            'actions': {'home': ['RSP'], 'away': ['RSP']}
+            'actions': {'home': ['RSP'], 'away': ['RSP']},
+            'result': AssertionPredicate.containsAll([rspmodel.GainResult(
+                play = Play.SHORT_RUN,
+                player = ACTING_PLAYER,
+                yards = 5
+            )])
         })
     
     def test_short_run_cont_loss(self):
@@ -783,7 +798,8 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.PLAY_CALL,
             'possession': OPPONENT,
             'ballpos': 80,
-            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([rspmodel.TurnoverResult(type = 'DOWNS')])
         })
 
     def test_short_run_sack_success(self):
@@ -807,7 +823,12 @@ class ActionHandlerTest(unittest.TestCase):
             'play': None,
             'ballpos': 15,
             'down': 2,
-            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([rspmodel.LossResult(
+                play = Play.SHORT_RUN,
+                player = OPPONENT,
+                yards = 5
+            )])
         }, roll = [5])
     
     def test_short_run_sack_fail(self):
@@ -953,7 +974,7 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']}
         }, roll = [3])
     
-    def test_long_run_roll_recover(self):
+    def test_long_run_fumble_recover(self):
         self.action_test_helper(init_game = {
             'state': State.FUMBLE,
             'possession': ACTING_PLAYER,
@@ -1031,10 +1052,13 @@ class ActionHandlerTest(unittest.TestCase):
             'down': 1,
             'ballpos': 80,
             'firstDown': 90,
-            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']}
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([rspmodel.TurnoverResult(
+                type = 'DOWNS'
+            )])
         })
 
-    def test_long_run_roll_turnover(self):
+    def test_long_run_fumble_turnover(self):
         self.action_test_helper(init_game = {
             'state': State.FUMBLE,
             'possession': ACTING_PLAYER,
@@ -1058,7 +1082,10 @@ class ActionHandlerTest(unittest.TestCase):
             'down': 1,
             'ballpos': 80,
             'firstDown': 90,
-            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']}
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([rspmodel.TurnoverResult(
+                type = 'FUMBLE'
+            )])
         })
 
     def test_long_run_roll_turnover_touchback(self):
@@ -1085,7 +1112,10 @@ class ActionHandlerTest(unittest.TestCase):
             'down': 1,
             'ballpos': 20,
             'firstDown': 30,
-            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']}
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([rspmodel.TurnoverResult(
+                type = 'FUMBLE'
+            )])
         })
     
     def test_long_run_sack_five(self):
@@ -1109,7 +1139,12 @@ class ActionHandlerTest(unittest.TestCase):
             'play': None,
             'ballpos': 15,
             'down': 2,
-            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([rspmodel.LossResult(
+                play = Play.LONG_RUN,
+                player = OPPONENT,
+                yards = 5
+            )])
         }, roll = [1])
 
     def test_long_run_sack_ten(self):
@@ -1133,7 +1168,12 @@ class ActionHandlerTest(unittest.TestCase):
             'play': None,
             'ballpos': 10,
             'down': 2,
-            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']}
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([rspmodel.LossResult(
+                play = Play.LONG_RUN,
+                player = OPPONENT,
+                yards = 10
+            )])
         }, roll = [6])
 
     def test_short_pass_win(self):
@@ -1180,7 +1220,7 @@ class ActionHandlerTest(unittest.TestCase):
             'possession': ACTING_PLAYER,
             'play': Play.SHORT_PASS,
             'ballpos': 10,
-            'actions': {OPPONENT: ['SACK_CHOICE']},
+            'actions': {OPPONENT: ['SACK_CHOICE']}
         })
     
     def test_short_pass_tie(self):
@@ -1204,7 +1244,7 @@ class ActionHandlerTest(unittest.TestCase):
             'play': None,
             'down': 2,
             'ballpos': 10,
-            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']}
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']},
         })
 
     def test_short_pass_cont_win(self):
@@ -1360,7 +1400,8 @@ class ActionHandlerTest(unittest.TestCase):
             'ballpos': 20,
             'down': 2,
             'firstDown': 30,
-            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']}
+            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([IncompletePassResult()])
         }, roll = [5])
 
     def test_pick_roll_short_pass_touchback(self):
@@ -1443,7 +1484,7 @@ class ActionHandlerTest(unittest.TestCase):
             'play': None,
             'down': 2,
             'ballpos': 10,
-            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']}
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']},
         })
     
     def test_long_pass_roll(self):
@@ -1563,6 +1604,7 @@ class ActionHandlerTest(unittest.TestCase):
             'ballpos': 20,
             'firstDown': 30,
             'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([IncompletePassResult()])
         }, roll = [4])
     
     def test_distance_roll_long_pass(self):
@@ -1642,8 +1684,8 @@ class ActionHandlerTest(unittest.TestCase):
             'possession': ACTING_PLAYER,
             'play': Play.BOMB,
             'ballpos': 10,
-            'actions': {OPPONENT: ['SACK_CHOICE']},
-        })
+            'actions': {OPPONENT: ['SACK_CHOICE']}
+    })
     
     def test_bomb_tie(self):
         self.action_test_helper(init_game = {
@@ -1666,7 +1708,7 @@ class ActionHandlerTest(unittest.TestCase):
             'play': None,
             'down': 2,
             'ballpos': 10,
-            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']}
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']},
         })
     
     def test_bomb_first_roll_odd(self):
@@ -1820,7 +1862,8 @@ class ActionHandlerTest(unittest.TestCase):
             'firstDown': 20,
             'down': 2,
             'roll': [5, 4, 1],
-            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([IncompletePassResult()])
         }, roll = [1])
     
     def test_bomb_third_roll_under_35(self):
@@ -1987,6 +2030,7 @@ class ActionHandlerTest(unittest.TestCase):
             'ballpos': 20,
             'firstDown': 30,
             'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([IncompletePassResult()])
         }, roll = [5])
     
     def test_distance_roll_bomb(self):
@@ -2126,6 +2170,7 @@ class ActionHandlerTest(unittest.TestCase):
             'play': None,
             'ballpos': 100,
             'actions': {ACTING_PLAYER: ['PAT_CHOICE']},
+            'result': AssertionPredicate.containsAll([ScoreResult(type = 'TOUCHDOWN')])
         }, roll = [6])
 
     def test_touchdown_last_play(self):
@@ -2148,7 +2193,8 @@ class ActionHandlerTest(unittest.TestCase):
             'possession': ACTING_PLAYER,
             'playCount': 81,
             'score': {ACTING_PLAYER: 6, OPPONENT: 0},
-            'actions': {ACTING_PLAYER: ['PAT_CHOICE']}
+            'actions': {ACTING_PLAYER: ['PAT_CHOICE']},
+            'result': AssertionPredicate.containsAll([ScoreResult(type = 'TOUCHDOWN')])
         })
     
     def test_pat_choice_one_point(self):
@@ -2191,7 +2237,8 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.KICKOFF_CHOICE,
             'possession': ACTING_PLAYER,
             'actions': {ACTING_PLAYER: ['KICKOFF_CHOICE']},
-            'score': {ACTING_PLAYER: 7, OPPONENT: 0}
+            'score': {ACTING_PLAYER: 7, OPPONENT: 0},
+            'result': AssertionPredicate.containsAll([ScoreResult(type = 'PAT_1')])
         }, roll = [1, 3])
     
     def test_pat_kick_miss(self):
@@ -2241,7 +2288,8 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.KICKOFF_CHOICE,
             'possession': ACTING_PLAYER,
             'actions': {ACTING_PLAYER: ['KICKOFF_CHOICE']},
-            'score': {ACTING_PLAYER: 8, OPPONENT: 0}
+            'score': {ACTING_PLAYER: 8, OPPONENT: 0},
+            'result': AssertionPredicate.containsAll([ScoreResult(type = 'PAT_2')])
         })
     
     def test_two_point_conversion_loss(self):
@@ -2321,7 +2369,7 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {OPPONENT: ['KICKOFF_CHOICE']},
             'playCount': 2,
             'score': {ACTING_PLAYER: 2, OPPONENT: 0},
-            'result': [{'name': 'ROLL', 'player': ACTING_PLAYER, 'roll': [5]}, {'name': 'SAFETY'}]
+            'result': AssertionPredicate.containsAll([ScoreResult(type = 'SAFETY')])
         }, roll = [5])
     
     def test_safety_last_play(self):
@@ -2340,7 +2388,7 @@ class ActionHandlerTest(unittest.TestCase):
         ), expected_game = {
             'state': State.GAME_OVER,
             'score': {ACTING_PLAYER: 2, OPPONENT: 0},
-            'result': [{'name': 'ROLL', 'player': ACTING_PLAYER, 'roll': [5]}, {'name': 'SAFETY'}]
+            'result': AssertionPredicate.containsAll([ScoreResult(type = 'SAFETY')])
         }, roll = [5])
 
 class ActionHandlerRegistrationTest(unittest.TestCase):

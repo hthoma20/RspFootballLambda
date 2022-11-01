@@ -120,6 +120,13 @@ class TurnoverType(str, Enum):
     PICK = 'PICK'
     FUMBLE = 'FUMBLE'
 
+class ScoreType(str, Enum):
+    TOUCHDOWN = 'TOUCHDOWN'
+    FIELD_GOAL = 'FIELD_GOAL'
+    SAFETY = 'SAFETY'
+    PAT_1 = 'PAT_1'
+    PAT_2 = 'PAT_2'
+
 class RspResult(BaseModel):
     name: Literal['RSP'] = 'RSP'
     home: RspChoice
@@ -130,8 +137,9 @@ class RollResult(BaseModel):
     player: Player
     roll: list[int]
 
-class SafetyResult(BaseModel):
-    name: Literal['SAFETY'] = 'SAFETY'
+class ScoreResult(BaseModel):
+    name: Literal['SCORE'] = 'SCORE'
+    type: ScoreType
 
 class GainResult(BaseModel):
     name: Literal['GAIN'] = 'GAIN'
@@ -152,10 +160,20 @@ class TurnoverResult(BaseModel):
 class OutOfBoundsPassResult(BaseModel):
     name: Literal['OOB_PASS'] = 'OOB_PASS'
 
+class OutOfBoundsKickResult(BaseModel):
+    name: Literal['OOB_KICK'] = 'OOB_KICK'
+
 class TouchbackResult(BaseModel):
     name: Literal['TOUCHBACK'] = 'TOUCHBACK'
 
-Result = Union[RspResult, RollResult, SafetyResult, GainResult, LossResult, TurnoverResult, OutOfBoundsPassResult, TouchbackResult]
+class IncompletePassResult(BaseModel):
+    name: Literal['INCOMPLETE'] = 'INCOMPLETE'
+
+class KickoffElectionResult(BaseModel):
+    name: Literal['KICK_ELECTION'] = 'KICK_ELECTION'
+    choice: KickoffElectionChoice
+
+Result = Union[RspResult, RollResult, ScoreResult, GainResult, LossResult, TurnoverResult, OutOfBoundsPassResult, OutOfBoundsKickResult, TouchbackResult, IncompletePassResult, KickoffElectionResult]
 
 class Game(BaseModel):
     gameId: str
