@@ -2208,7 +2208,8 @@ class ActionHandlerTest(unittest.TestCase):
         ), expected_game = {
             'state': State.EXTRA_POINT,
             'possession': ACTING_PLAYER,
-            'actions': {ACTING_PLAYER: ['ROLL']}
+            'actions': {ACTING_PLAYER: ['ROLL']},
+            'ballpos': 95,
         })
     
     def test_pat_choice_two_point(self):
@@ -2222,7 +2223,8 @@ class ActionHandlerTest(unittest.TestCase):
         ), expected_game = {
             'state': State.EXTRA_POINT_2,
             'possession': ACTING_PLAYER,
-            'actions': {'home': ['RSP'], 'away': ['RSP']}
+            'actions': {'home': ['RSP'], 'away': ['RSP']},
+            'ballpos': 95,
         })
 
     def test_pat_kick_success(self):

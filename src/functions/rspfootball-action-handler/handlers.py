@@ -799,6 +799,7 @@ class PatChoiceActionHandler(ActionHandler):
     actions = [rspmodel.PatChoiceAction]
 
     def handle_action(self, game, player, action):
+        game.ballpos = 95
         if action.choice == PatChoice.ONE_POINT:
             game.state = State.EXTRA_POINT
             game.actions[player] = ['ROLL']
