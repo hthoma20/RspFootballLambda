@@ -740,6 +740,11 @@ class DistanceRollActionHandler(RollActionHandler):
         
         raise Exception(f"Unexpected play for DistanceRoll: {play}")
 
+def complete_pick_return(game):
+    set_first_down(game)
+    game.down = 0
+    end_play(game)
+
 class PickReturnActionHandler(RollActionHandler):
     states = [State.PICK_RETURN]
     allowed_counts = [1]
@@ -753,8 +758,7 @@ class PickReturnActionHandler(RollActionHandler):
             game.state = State.PICK_RETURN_6
             game.actions[game.possession] = ['ROLL']
         else:
-            set_call_play_state(game)
-            set_first_down(game)
+            complete_pick_return(game)
 
 class PickReturn6ActionHandler(RollActionHandler):
     states = [State.PICK_RETURN_6]
@@ -765,10 +769,9 @@ class PickReturn6ActionHandler(RollActionHandler):
         
         if roll == 6:
             game.ballpos = 100
-            touchdown(game)
+            end_play(game)
         else:
-            set_first_down(game)
-            set_call_play_state(game)
+            complete_pick_return(game)
 
 class PickTouchbackChoiceActionHandler(ActionHandler):
     states = [State.PICK_TOUCHBACK_CHOICE]
@@ -778,8 +781,7 @@ class PickTouchbackChoiceActionHandler(ActionHandler):
         if action.choice == TouchbackChoice.TOUCHBACK:
             game.result += [rspmodel.TouchbackResult()]
             game.ballpos = 20
-            set_first_down(game)
-            set_call_play_state(game)
+            complete_pick_return(game)
         else: # choice is RETURN
             game.state = State.PICK_RETURN
             game.actions[player] = ['ROLL']

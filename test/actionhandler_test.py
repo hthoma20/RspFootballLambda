@@ -81,7 +81,7 @@ class ActionHandlerTest(unittest.TestCase):
         self.assertEqual(type(actual), dict)
 
         for key, expected_value in expected.items():
-            self.assertTrue(key in actual)
+            self.assertTrue(key in actual, f"key given in expected dict, but not present in actual: {key}")
 
             if type(expected[key]) is dict:
                 self.assertValues(actual[key], expected[key])
@@ -2053,6 +2053,27 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
             'result': AssertionPredicate.containsAll([OutOfBoundsPassResult()])
         }, roll = [4,5,6])
+    
+    def test_pick_touchback_choice_touchback(self):
+        self.action_test_helper(init_game = {
+            'state': State.PICK_TOUCHBACK_CHOICE,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'playCount': 10,
+            'down': 2,
+            'ballpos': -5
+        }, action = rspmodel.TouchbackChoiceAction(
+            choice = TouchbackChoice.TOUCHBACK
+        ), expected_game = {
+            'state': State.PLAY_CALL,
+            'possession': ACTING_PLAYER,
+            'play': None,
+            'ballpos': 20,
+            'firstDown': 30,
+            'down': 1,
+            'playCount': 11,
+            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
+        })
 
     def test_pick_touchback_choice_return(self):
         self.action_test_helper(init_game = {
@@ -2075,6 +2096,7 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.PICK_RETURN,
             'possession': ACTING_PLAYER,
             'play': None,
+            'playCount': 10,
             'ballpos': 10
         }, action = rspmodel.RollAction(
             count = 1
@@ -2082,7 +2104,10 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.PLAY_CALL,
             'possession': ACTING_PLAYER,
             'play': None,
+            'playCount': 11, 
             'ballpos': 20,
+            'firstDown': 30,
+            'down': 1,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
         }, roll = [2])
 
@@ -2107,6 +2132,7 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.PICK_RETURN_6,
             'possession': ACTING_PLAYER,
             'play': None,
+            'playCount': 10,
             'ballpos': 40
         }, action = rspmodel.RollAction(
             count = 1
@@ -2114,7 +2140,10 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.PLAY_CALL,
             'possession': ACTING_PLAYER,
             'play': None,
+            'playCount': 11,
             'ballpos': 40,
+            'firstDown': 50,
+            'down': 1,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']},
         }, roll = [1])
     
@@ -2123,6 +2152,7 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.PICK_RETURN_6,
             'possession': ACTING_PLAYER,
             'play': None,
+            'playCount': 10,
             'ballpos': 40
         }, action = rspmodel.RollAction(
             count = 1
@@ -2130,6 +2160,7 @@ class ActionHandlerTest(unittest.TestCase):
             'state': State.PAT_CHOICE,
             'possession': ACTING_PLAYER,
             'play': None,
+            'playCount': 11,
             'ballpos': 100,
             'actions': {ACTING_PLAYER: ['PAT_CHOICE']},
             'result': AssertionPredicate.containsAll([ScoreResult(type = 'TOUCHDOWN')])
