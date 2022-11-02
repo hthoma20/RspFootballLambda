@@ -5,7 +5,7 @@ sys.path.append(f'src/layers/rspfootball-util')
 sys.path.append(f'src/functions/rspfootball-action-handler')
 
 import rspmodel
-from rspmodel import GainResult, IncompletePassResult, KickoffChoiceAction, LossResult, OutOfBoundsPassResult, Play, RollAction, ScoreResult, State, TouchbackChoice, TouchbackResult, TurnoverResult
+from rspmodel import GainResult, IncompletePassResult, KickoffChoiceAction, LossResult, OutOfBoundsPassResult, Play, RollAction, ScoreResult, ScoreType, State, TouchbackChoice, TouchbackResult, TurnoverResult, TurnoverType
 import rsputil
 import actionhandler
 
@@ -420,16 +420,21 @@ class ActionHandlerTest(unittest.TestCase):
         self.action_test_helper(init_game = {
             'state': State.KICK_RETURN_1,
             'possession': ACTING_PLAYER,
-            'ballpos': 10
+            'ballpos': 10,
+            'playCount': 5,
         }, action = rspmodel.RollAgainChoiceAction(
             name = 'ROLL_AGAIN_CHOICE',
             choice = 'ROLL'
         ), expected_game = {
-            'state': State.FUMBLE,
-            'possession': ACTING_PLAYER,
-            'ballpos': 15,
+            'state': State.PLAY_CALL,
+            'possession': OPPONENT,
+            'ballpos': 85,
+            'firstDown': 95,
+            'down': 1,
+            'playCount': 5,
             'play': None,
-            'actions': {ACTING_PLAYER: ['RSP'], OPPONENT: ['RSP']}
+            'actions': {ACTING_PLAYER: ['POLL', 'PENALTY'], OPPONENT: ['CALL_PLAY', 'PENALTY']},
+            'result': AssertionPredicate.containsAll([TurnoverResult(type = TurnoverType.FUMBLE)])
         }, roll=[1])
     
     def test_kick_return_1_roll_normal(self):
@@ -464,49 +469,6 @@ class ActionHandlerTest(unittest.TestCase):
             'firstDown': 20,
             'play': None,
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY']}
-        })
-    
-    def test_kickoff_return_fumble_retain(self):
-        self.action_test_helper(init_game = {
-            'state': State.FUMBLE,
-            'play': None,
-            'possession': ACTING_PLAYER,
-            'playCount': 10,
-            'rsp': {
-                ACTING_PLAYER: None,
-                OPPONENT: 'ROCK'
-            }
-        }, action = rspmodel.RspAction(
-            name = 'RSP',
-            choice = 'ROCK' # Tie should retain
-        ), expected_game = {
-            'state': State.PLAY_CALL,
-            'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']},
-            'possession': ACTING_PLAYER,
-            'playCount': 10
-        })
-    
-    def test_kickoff_return_fumble_turnover(self):
-        self.action_test_helper(init_game = {
-            'state': State.FUMBLE,
-            'play': None,
-            'possession': ACTING_PLAYER,
-            'ballpos': 40,
-            'playCount': 10,
-            'rsp': {
-                ACTING_PLAYER: None,
-                OPPONENT: 'ROCK'
-            }
-        }, action = rspmodel.RspAction(
-            name = 'RSP',
-            choice = 'SCISSORS'
-        ), expected_game = {
-            'state': State.PLAY_CALL,
-            'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']},
-            'possession': OPPONENT,
-            'ballpos': 60,
-            'playCount': 10,
-            'result': AssertionPredicate.containsAll([rspmodel.TurnoverResult(type = 'FUMBLE')])
         })
 
     
@@ -943,7 +905,6 @@ class ActionHandlerTest(unittest.TestCase):
             'ballpos': 20,
             'firstDown': 30
         }, action = rspmodel.RollAction(
-            name = 'ROLL',
             count = 1
         ), expected_game = {
             'state': State.FUMBLE,
@@ -1025,7 +986,8 @@ class ActionHandlerTest(unittest.TestCase):
             'playCount': 11,
             'down': 2,
             'score': {ACTING_PLAYER: 6, OPPONENT: 0},
-            'actions': {ACTING_PLAYER: ['PAT_CHOICE'], OPPONENT: ['POLL']}
+            'actions': {ACTING_PLAYER: ['PAT_CHOICE'], OPPONENT: ['POLL']},
+            'result': AssertionPredicate.containsAll([ScoreResult(type = ScoreType.TOUCHDOWN)])
         })
     
     def test_long_run_roll_recover_fourth_down(self):
@@ -1065,7 +1027,7 @@ class ActionHandlerTest(unittest.TestCase):
             'play': Play.LONG_RUN,
             'playCount': 10,
             'down': 1,
-            'ballpos': 20,
+            'ballpos': 80,
             'firstDown': 25,
             'rsp': {
                 ACTING_PLAYER: None,
@@ -1080,8 +1042,8 @@ class ActionHandlerTest(unittest.TestCase):
             'play': None,
             'playCount': 11,
             'down': 1,
-            'ballpos': 80,
-            'firstDown': 90,
+            'ballpos': 20,
+            'firstDown': 30,
             'actions': {OPPONENT: ['CALL_PLAY', 'PENALTY'], ACTING_PLAYER: ['POLL', 'PENALTY']},
             'result': AssertionPredicate.containsAll([rspmodel.TurnoverResult(
                 type = 'FUMBLE'
@@ -1094,7 +1056,7 @@ class ActionHandlerTest(unittest.TestCase):
             'possession': ACTING_PLAYER,
             'play': Play.LONG_RUN,
             'playCount': 10,
-            'down': 4,
+            'down': 2,
             'ballpos': 100,
             'firstDown': 100,
             'rsp': {

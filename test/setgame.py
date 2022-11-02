@@ -1,3 +1,4 @@
+import json
 import sys
 
 sys.path.append(f'src/layers/rspfootball-util')
@@ -47,8 +48,20 @@ def set_game(overrides):
 if __name__ == '__main__':
 
     overrides = {}
-    for arg in sys.argv[1:]:
-        key, val = arg.split('=')
-        overrides[key] = val
+    args = sys.argv[1:]
+    for argindex, arg in enumerate(args):
+        if '=' in arg:
+            key, val = arg.split('=')
+            overrides[key] = val
+        elif arg == '--json':
+            if len(overrides) > 0:
+                print('= args cannot be used with a --json arg', file=sys.stderr)
+                exit(1)
+            
+            overrides = json.loads(args[argindex + 1])
+            break
+        else:
+            print('''Unrecognized arg. Use <key>=<val> to override default attributes, or
+                --json to provide a full game''', file=sys.stderr)
 
     set_game(overrides)

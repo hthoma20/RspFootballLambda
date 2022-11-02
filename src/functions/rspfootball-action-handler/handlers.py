@@ -28,6 +28,7 @@ def touchdown(game):
     game.score[game.possession] += 6
     game.state = State.PAT_CHOICE
     game.actions[game.possession] = ['PAT_CHOICE']
+    game.actions[get_opponent(game.possession)] = ['POLL']
     game.result += [ScoreResult(type = 'TOUCHDOWN')]
 
 
@@ -281,21 +282,18 @@ class KickReturn1ActionHandler(ActionHandler):
             return
         
         # choice is ROLL
-        roll = roll_dice(count=1)
-        game.result += [rspmodel.RollResult(roll=roll, player=player)]
+        game.roll = roll_dice(count=1)
+        game.result += [rspmodel.RollResult(roll=game.roll, player=player)]
 
-        [roll] = roll
+        [roll] = game.roll
         game.ballpos += 5 * roll
 
         if roll == 1:
-            game.state = State.FUMBLE
-            game.actions = {
-                'home': ['RSP'],
-                'away': ['RSP']
-            }
-        else:
-            set_call_play_state(game)
-            set_first_down(game)
+            switch_possession(game)
+            game.result += [TurnoverResult(type = TurnoverType.FUMBLE)]
+        
+        set_call_play_state(game)
+        set_first_down(game)
 
 class KickoffElectionActionHandler(ActionHandler):
     states = [State.KICKOFF_ELECTION]
@@ -611,34 +609,26 @@ class FumbleActionHandler(RspActionHandler):
     states = [State.FUMBLE]
 
     def handle_rsp_action(self, game, winner):
-        # A fumble occurs in one of three situations:
-        # A kickoff return, a punt return, or a long run
+        # This handler handles a Fumble only from a Long Run
+        # in the case of a fumbled kickoff or punt return, the kicking team
+        # immediately recovers
 
         # The player with possession has the "advantage" - a win or tie
         # retains possession
         if winner == get_opponent(game.possession):
-            
-            # calling end_play will count the safety
-            if game.ballpos <= 0:
-                end_play(game)
-                return
 
             switch_possession(game)
             game.result += [TurnoverResult(type = TurnoverType.FUMBLE)]
 
-            # this means we are about to end the play, and it should be first down for the
-            # recovering player
-            if game.play:
-                if game.ballpos <= 0:
-                    game.ballpos = 20
-                    set_first_down(game)
-                    game.down = 0
+            # it is possible to recover a fumble in own goal
+            if game.ballpos <= 0:
+                game.ballpos = 20
 
-        # if this is a punt return or long run
-        if game.play:
-            end_play(game)
-        else: # if this is a kick return
-            set_call_play_state(game)
+            set_first_down(game)
+            game.down = 0 # mark down as 0, so that when the play is ended, it is first down
+
+        set_call_play_state(game)
+        end_play(game)
 
 class SackChoiceActionHandler(ActionHandler):
     states = [State.SACK_CHOICE]
