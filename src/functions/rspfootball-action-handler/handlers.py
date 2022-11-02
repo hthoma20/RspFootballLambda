@@ -416,10 +416,11 @@ class LongRunRollActionHandler(RollActionHandler):
 
     def handle_roll_action(self, game, roll):
         [roll] = roll
-        distance = roll*5
+        distance_to_goal = 100 - game.ballpos
+        distance = min(roll*5, distance_to_goal)
         game.ballpos += distance
         game.result += [GainResult(
-                play = Play.SHORT_RUN,
+                play = Play.LONG_RUN,
                 player = game.possession,
                 yards = distance
             )]

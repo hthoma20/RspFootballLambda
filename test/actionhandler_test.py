@@ -896,6 +896,32 @@ class ActionHandlerTest(unittest.TestCase):
             'actions': {ACTING_PLAYER: ['CALL_PLAY', 'PENALTY'], OPPONENT: ['POLL', 'PENALTY']}
         })
     
+    def test_long_run_roll_touchdown(self):
+        self.action_test_helper(init_game = {
+            'state': State.LONG_RUN_ROLL,
+            'possession': ACTING_PLAYER,
+            'play': Play.LONG_RUN,
+            'playCount': 10,
+            'ballpos': 95,
+            'firstDown': 100
+        }, action = rspmodel.RollAction(
+            count = 1
+        ), expected_game = {
+            'state': State.PAT_CHOICE,
+            'possession': ACTING_PLAYER,
+            'playCount': 11,
+            'ballpos': 100,
+            'actions': {ACTING_PLAYER: ['PAT_CHOICE'], OPPONENT: ['POLL']},
+            'result': AssertionPredicate.containsAll([
+                ScoreResult(type = ScoreType.TOUCHDOWN),
+                GainResult(
+                    play = Play.LONG_RUN,
+                    player = ACTING_PLAYER,
+                    yards = 5
+                )
+            ])
+        }, roll = [5])
+    
     def test_long_run_roll_fumble(self):
         self.action_test_helper(init_game = {
             'state': State.LONG_RUN_ROLL,
