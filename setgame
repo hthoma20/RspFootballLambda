@@ -1,3 +1,10 @@
+#!/usr/bin/python3
+
+if __name__ != '__main__':
+    print("Must be run as main module")
+    exit(1)
+
+import argparse
 import json
 import sys
 
@@ -45,23 +52,18 @@ def set_game(overrides):
 
     rsputil.store_game(rspmodel.Game(**game))
 
-if __name__ == '__main__':
+parser = argparse.ArgumentParser(description='Update a game in DDB')
+parser.add_argument('--json', default='{}', help='A json describing the desired game. If omitted, a default game is used')
+parser.add_argument('overrides', nargs='*', default=[], help='Override default attributes. Should be in <key>=<value> form')
 
-    overrides = {}
-    args = sys.argv[1:]
-    for argindex, arg in enumerate(args):
-        if '=' in arg:
-            key, val = arg.split('=')
-            overrides[key] = val
-        elif arg == '--json':
-            if len(overrides) > 0:
-                print('= args cannot be used with a --json arg', file=sys.stderr)
-                exit(1)
-            
-            overrides = json.loads(args[argindex + 1])
-            break
-        else:
-            print('''Unrecognized arg. Use <key>=<val> to override default attributes, or
-                --json to provide a full game''', file=sys.stderr)
+args = parser.parse_args()
 
-    set_game(overrides)
+overrides = json.loads(args.json)
+for override in args.overrides:
+    if '=' not in override:
+        print("Unrecognized arg. Use <key>=<val> to override default attributes", file=sys.stderr)
+        exit(1)
+    key, val = override.split('=')
+    overrides[key] = val
+
+set_game(overrides)
