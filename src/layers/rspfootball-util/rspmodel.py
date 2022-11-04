@@ -32,6 +32,10 @@ class State(str, Enum):
     BOMB = 'BOMB'
     BOMB_ROLL = 'BOMB_ROLL'
     BOMB_CHOICE = 'BOMB_CHOICE'
+    PUNT = 'PUNT'
+    FAKE_PUNT_CHOICE = 'FAKE_PUNT_CHOICE'
+    PUNT_KICK = 'PUNT_KICK'
+    PUNT_BLOCK = 'PUNT_BLOCK'
     SACK_CHOICE = 'SACK_CHOICE'
     SACK_ROLL = 'SACK_ROLL'
     PICK_ROLL = 'PICK_ROLL'
@@ -47,6 +51,7 @@ class Play(str, Enum):
     SHORT_PASS = 'SHORT_PASS'
     LONG_PASS = 'LONG_PASS'
     BOMB = 'BOMB'
+    PUNT = 'PUNT'
 
 class RspChoice(str, Enum):
     ROCK = 'ROCK'
@@ -72,6 +77,10 @@ class RollAgainChoice(str, Enum):
 class PatChoice(str, Enum):
     ONE_POINT = 'ONE_POINT'
     TWO_POINT = 'TWO_POINT'
+
+class FakeKickChoice(str, Enum):
+    FAKE = 'FAKE'
+    KICK = 'KICK'
 
 class SackChoice(str, Enum):
     SACK = 'SACK'
@@ -113,7 +122,11 @@ class SackChoiceAction(BaseModel):
     name: Literal['SACK_CHOICE'] = 'SACK_CHOICE'
     choice: SackChoice
 
-Action = Union[RspAction, RollAction, KickoffElectionAction, KickoffChoiceAction, CallPlayAction, TouchbackChoiceAction, RollAgainChoiceAction, PatChoiceAction, SackChoiceAction]
+class FakeKickChoiceAction(BaseModel):
+    name: Literal['FAKE_KICK_CHOICE'] = 'FAKE_KICK_CHOICE'
+    choice: FakeKickChoice
+
+Action = Union[RspAction, RollAction, KickoffElectionAction, KickoffChoiceAction, CallPlayAction, TouchbackChoiceAction, RollAgainChoiceAction, PatChoiceAction, SackChoiceAction, FakeKickChoiceAction]
 
 class TurnoverType(str, Enum):
     DOWNS = 'DOWNS'
@@ -169,11 +182,20 @@ class TouchbackResult(BaseModel):
 class IncompletePassResult(BaseModel):
     name: Literal['INCOMPLETE'] = 'INCOMPLETE'
 
+class CoffinCornerResult(BaseModel):
+    name: Literal['COFFIN_CORNER'] = 'COFFIN_CORNER'
+
+class FakeKickResult(BaseModel):
+    name: Literal['FAKE_KICK'] = 'FAKE_KICK'
+
+class BlockedKickResult(BaseModel):
+    name: Literal['BLOCKED_KICK'] = 'BLOCKED_KICK'
+
 class KickoffElectionResult(BaseModel):
     name: Literal['KICK_ELECTION'] = 'KICK_ELECTION'
     choice: KickoffElectionChoice
 
-Result = Union[RspResult, RollResult, ScoreResult, GainResult, LossResult, TurnoverResult, OutOfBoundsPassResult, OutOfBoundsKickResult, TouchbackResult, IncompletePassResult, KickoffElectionResult]
+Result = Union[RspResult, RollResult, ScoreResult, GainResult, LossResult, TurnoverResult, OutOfBoundsPassResult, OutOfBoundsKickResult, TouchbackResult, IncompletePassResult, CoffinCornerResult, FakeKickResult, BlockedKickResult, KickoffElectionResult]
 
 class Game(BaseModel):
     gameId: str

@@ -2,7 +2,7 @@ import logging
 import random
 
 import rspmodel
-from rspmodel import Action, GainResult, IncompletePassResult, KickoffChoice, KickoffElectionChoice, KickoffElectionResult, OutOfBoundsKickResult, OutOfBoundsPassResult, PatChoice, Play, RollAction, RollAgainChoice, RspChoice, SackChoice, ScoreResult, State, TouchbackChoice, TurnoverResult, TurnoverType
+from rspmodel import BlockedKickResult, CoffinCornerResult, FakeKickChoice, FakeKickChoiceAction, FakeKickResult, GainResult, IncompletePassResult, KickoffChoice, KickoffElectionChoice, KickoffElectionResult, OutOfBoundsKickResult, OutOfBoundsPassResult, PatChoice, Play, RollAgainChoice, RollResult, RspChoice, SackChoice, ScoreResult, State, TouchbackChoice, TurnoverResult, TurnoverType
 from rsputil import get_opponent
 
 class IllegalActionException(Exception):
@@ -208,13 +208,11 @@ class KickoffActionHandler(RollActionHandler):
         if sum(roll) <= 8:
             game.result += [OutOfBoundsKickResult()]
             game.ballpos = 40
-            set_first_down(game)
-            set_call_play_state(game)
+            end_kick_return(game)
 
         elif game.ballpos <= -10:
             game.ballpos = 20
-            set_first_down(game)
-            set_call_play_state(game)
+            end_kick_return(game)
 
         elif game.ballpos <= 0:
             game.state = State.TOUCHBACK_CHOICE
@@ -253,8 +251,7 @@ class KickReturnActionHandler(RollActionHandler):
             game.state = State.KICK_RETURN_6
             game.actions[game.possession] = ['ROLL']
         else:
-            set_call_play_state(game)
-            set_first_down(game)
+            end_kick_return(game)
 
 class KickReturn6ActionHandler(RollActionHandler):
     states = [State.KICK_RETURN_6]
@@ -264,11 +261,11 @@ class KickReturn6ActionHandler(RollActionHandler):
         [roll] = roll
         
         if roll == 6:
-            touchdown(game)
+            game.ballpos = 100
         else:
             game.ballpos += 5 * roll
-            set_first_down(game)
-            set_call_play_state(game)
+        
+        end_kick_return(game)
 
 class KickReturn1ActionHandler(ActionHandler):
     states = [State.KICK_RETURN_1]
@@ -277,8 +274,7 @@ class KickReturn1ActionHandler(ActionHandler):
     def handle_action(self, game, player, action):
         
         if action.choice == RollAgainChoice.HOLD:
-            set_call_play_state(game)
-            set_first_down(game)
+            end_kick_return(game)
             return
         
         # choice is ROLL
@@ -292,8 +288,7 @@ class KickReturn1ActionHandler(ActionHandler):
             switch_possession(game)
             game.result += [TurnoverResult(type = TurnoverType.FUMBLE)]
         
-        set_call_play_state(game)
-        set_first_down(game)
+        end_kick_return(game)
 
 class KickoffElectionActionHandler(ActionHandler):
     states = [State.KICKOFF_ELECTION]
@@ -331,10 +326,8 @@ class TouchbackChoiceActionHandler(ActionHandler):
     def handle_action(self, game, player, action):
         if action.choice == TouchbackChoice.TOUCHBACK:
             game.ballpos = 20
-            set_first_down(game)
-            set_call_play_state(game)
+            end_kick_return(game)
         else: # choice is RETURN
-            game.play = None # since a punt can end with a kick return, mark that there is not a play to end
             game.state = State.KICK_RETURN
             game.actions[player] = ['ROLL']
 
@@ -356,6 +349,8 @@ class PlayCallActionHandler(ActionHandler):
             game.state = State.LONG_PASS
         elif action.play == Play.BOMB:
             game.state = State.BOMB
+        elif action.play == Play.PUNT:
+            game.state = Play.PUNT
         else:
             raise IllegalActionException("Unexpected play")
         
@@ -578,6 +573,115 @@ class BombChoiceActionHandler(ActionHandler):
             process_bomb_roll(game)
         else: # choice is HOLD
             end_bomb(game)
+
+
+class PuntActionHandler(RspActionHandler):
+    states = [State.PUNT]
+
+    def handle_rsp_action(self, game, winner):
+        
+        opponent = get_opponent(game.possession)
+
+        if winner == game.possession:
+            game.state = State.FAKE_PUNT_CHOICE
+            game.actions[game.possession] = ['FAKE_KICK_CHOICE']
+        elif winner == opponent:
+            game.state = State.PUNT_BLOCK
+            game.actions[opponent] = ['ROLL']
+        else:
+            game.state = State.PUNT_KICK
+            game.actions[game.possession] = ['ROLL']
+
+def end_kick_return(game):
+    if game.play == Play.PUNT:
+        set_first_down(game)
+        game.down = 0
+        end_play(game)
+    elif game.play == None:
+        if game.ballpos >= 100:
+            touchdown(game)
+        else:
+            set_call_play_state(game)
+            set_first_down(game)
+    else:
+        raise Exception(f"Unexpected play for kick return: {game.play}")
+
+class PuntKickActionHandler(RollActionHandler):
+    states = [State.PUNT_KICK]
+    allowed_counts = [1, 2, 3]
+
+    def handle_roll_action(self, game, roll):
+        distance = 5*sum(roll)
+
+        game.ballpos += distance
+        switch_possession(game)
+        game.firstDown = None
+
+        if game.ballpos <= -10:
+            game.ballpos = 20
+            end_kick_return(game)
+        elif game.ballpos <= 0:
+            game.state = State.TOUCHBACK_CHOICE
+            game.actions[game.possession] = ['TOUCHBACK_CHOICE']
+        elif game.ballpos <= 10:
+            set_first_down(game)
+            end_kick_return(game)
+            game.result += [CoffinCornerResult()]
+        else:
+            game.state = State.KICK_RETURN
+            game.actions[game.possession] = ['ROLL']
+
+def process_fake_kick(game):
+    game.roll = roll_dice(1)
+    game.result += [
+        FakeKickResult(),
+        RollResult(player = game.possession, roll = game.roll)
+    ]
+
+    [roll] = game.roll
+    distance_to_goal = 100 - game.ballpos
+    distance = 5*roll - 10
+
+    game.ballpos += min(distance_to_goal, distance)
+    end_play(game)
+
+class FakePuntChoiceActionHandler(ActionHandler):
+    states = [State.FAKE_PUNT_CHOICE]
+    actions = [FakeKickChoiceAction]
+
+    def handle_action(self, game, player, action):
+        
+        if action.choice == FakeKickChoice.KICK:
+            game.state = State.PUNT_KICK
+            game.actions[game.possession] = ['ROLL']        
+        else: # choice is FAKE
+            process_fake_kick(game)
+
+class KickBlockActionHandler(RollActionHandler):
+    states = [State.PUNT_BLOCK]
+    allowed_counts = [1]
+
+    def handle_roll_action(self, game, roll):
+        [roll] = roll
+
+        if roll != 1:
+            if game.state == State.PUNT_BLOCK:
+                game.state = State.PUNT_KICK
+            else:
+                raise Exception(f"Unexpected state for kick block: {game.state}")
+            
+            game.actions[game.possession] = ['ROLL']
+
+            return
+
+        # Here, the roll is 1, so it is a blocked kick
+        game.result += [BlockedKickResult()]
+        game.ballpos -= 10
+        switch_possession(game)
+        set_first_down(game)
+        game.down = 0
+        end_play(game)
+
 
 class SackActionHandler(RollActionHandler):
     states = [State.SACK_ROLL]
